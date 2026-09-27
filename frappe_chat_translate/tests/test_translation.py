@@ -5,13 +5,14 @@ language."""
 from unittest.mock import patch
 
 import frappe
+
 try:
     from frappe.tests import IntegrationTestCase
 except ImportError:  # Frappe v15
     from frappe.tests.utils import FrappeTestCase as IntegrationTestCase
 
 from frappe_chat_translate import translation as t
-from frappe_chat_translate.tests.test_guard import call, ensure_user, make_group
+from frappe_chat_translate.tests.test_guard import DESK_ROLE, call, ensure_user, make_group
 
 JA_USER = "tr.ja@example.com"
 VI_USER = "tr.vi@example.com"
@@ -23,22 +24,32 @@ def fake_engine(items, target, settings):
     out = {}
     for mid, text in items:
         source = "en" if text.isascii() else "ja"
-        out[mid] = {"id": mid, "source_language": source, "text": text if source == target else f"[{target}] {text}"}
+        out[mid] = {
+            "id": mid,
+            "source_language": source,
+            "text": text if source == target else f"[{target}] {text}",
+        }
     return out
 
 
 def get(user, *names):
     frappe.set_user(user)
-    return call("frappe_chat_translate.translation.get_translations", message_names=frappe.as_json(list(names)))
+    return call(
+        "frappe_chat_translate.translation.get_translations", message_names=frappe.as_json(list(names))
+    )
 
 
 class TestTranslation(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        for email, name, kind, lang in ((JA_USER, "Tr Ja", "System User", "ja"), (VI_USER, "Tr Vi", "Website User", "vi"),
-                                        (JA_USER_2, "Tr Ja2", "Website User", "ja"), (OUTSIDER, "Tr Out", "Website User", "vi")):
-            ensure_user(email, name, kind, roles=("Projects User",) if kind == "System User" else ())
+        for email, name, kind, lang in (
+            (JA_USER, "Tr Ja", "System User", "ja"),
+            (VI_USER, "Tr Vi", "Website User", "vi"),
+            (JA_USER_2, "Tr Ja2", "Website User", "ja"),
+            (OUTSIDER, "Tr Out", "Website User", "vi"),
+        ):
+            ensure_user(email, name, kind, roles=(DESK_ROLE,) if kind == "System User" else ())
             frappe.db.set_value("User", email, "language", lang)
         settings = frappe.get_doc("Chat Translate Settings")
         settings.enabled = 1
@@ -54,10 +65,14 @@ class TestTranslation(IntegrationTestCase):
         from clefincode_chat.api.api_1_3_4 import api as capi
 
         frappe.set_user("Administrator")
-        return capi.send(content, "Administrator", self.room, "Administrator")["results"][0]["new_message_name"]
+        return capi.send(content, "Administrator", self.room, "Administrator")["results"][0][
+            "new_message_name"
+        ]
 
     def test_plain_text_strips_editor_html(self):
-        self.assertEqual(t.plain_text("<p>こんにちは<br>BAL-001 &amp; <b>DOC</b></p>"), "こんにちは\nBAL-001 & DOC")
+        self.assertEqual(
+            t.plain_text("<p>こんにちは<br>BAL-001 &amp; <b>DOC</b></p>"), "こんにちは\nBAL-001 & DOC"
+        )
 
     @patch("frappe_chat_translate.translation.call_llm", side_effect=fake_engine)
     def test_everyone_reads_in_their_own_language(self, engine):
@@ -102,8 +117,16 @@ class TestTranslation(IntegrationTestCase):
         self.assertEqual(get(VI_USER, name)[name], "[vi] Version two.")
 
     def test_media_and_info_messages_are_skipped(self):
-        doc = frappe._dict(is_deleted=0, is_media=1, is_document=0, is_voice_clip=0, is_screenshot=0,
-                           message_type="", message_template_type="", content="x")
+        doc = frappe._dict(
+            is_deleted=0,
+            is_media=1,
+            is_document=0,
+            is_voice_clip=0,
+            is_screenshot=0,
+            message_type="",
+            message_template_type="",
+            content="x",
+        )
         self.assertFalse(t.is_translatable(doc))
         doc.update(is_media=0, message_type="info")
         self.assertFalse(t.is_translatable(doc))
@@ -136,8 +159,10 @@ class TestEngines(IntegrationTestCase):
         settings.gemini_model = ""
         settings.save(ignore_permissions=True)
         self.assertEqual(t.model_name(t.get_settings()), "gemini-2.5-flash")
-        with patch("frappe_chat_translate.translation.call_gemini", side_effect=fake_engine) as gemini, \
-                patch("frappe_chat_translate.translation.call_claude") as claude:
+        with (
+            patch("frappe_chat_translate.translation.call_gemini", side_effect=fake_engine) as gemini,
+            patch("frappe_chat_translate.translation.call_claude") as claude,
+        ):
             t.call_llm([("m1", "hello")], "ja", t.get_settings())
         gemini.assert_called_once()
         claude.assert_not_called()

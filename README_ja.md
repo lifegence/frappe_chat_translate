@@ -19,7 +19,7 @@ ClefinCode Chat 本体は変更しません。本プロジェクトは ClefinCod
 |---|---|
 | Frappe | v16（16.33.1、16.34.2）、v15（15.121.0） |
 | ClefinCode Chat | 1.3.913 |
-| Python | 3.10 以降（v15 は 3.11、v16 は 3.12 で確認） |
+| Python | 3.10 以降（v15 は 3.11、v16 は 3.14 で確認） |
 | 翻訳エンジン | Anthropic Claude または Google Gemini（API キーが必要） |
 
 ## インストール

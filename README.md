@@ -21,7 +21,7 @@ It does not modify ClefinCode Chat itself. This project is not affiliated with C
 |---|---|
 | Frappe | v16 (16.33.1, 16.34.2), v15 (15.121.0) |
 | ClefinCode Chat | 1.3.913 |
-| Python | 3.10 or later (tested with 3.11 on v15, 3.12 on v16) |
+| Python | 3.10 or later (tested with 3.11 on v15, 3.14 on v16) |
 | Translation engine | Anthropic Claude or Google Gemini (API key required) |
 
 ## Installation

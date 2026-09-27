@@ -87,8 +87,10 @@ def build_prompt(items: list[tuple[str, str]], target: str, settings) -> tuple[s
     if settings.translation_context:
         system += f"\nContext: {settings.translation_context.strip()}"
     if glossary:
-        system += ("\nGlossary (\"term\" = keep untranslated, \"term => rendering\" = always use that rendering):\n"
-                   + "\n".join(glossary))
+        system += (
+            '\nGlossary ("term" = keep untranslated, "term => rendering" = always use that rendering):\n'
+            + "\n".join(glossary)
+        )
     schema = {
         "type": "object",
         "properties": {
@@ -146,7 +148,10 @@ def build_request(items: list[tuple[str, str]], target: str, settings) -> dict:
         model=model_name(settings),
         max_tokens=16000,
         system=system,
-        output_config={"effort": settings.effort or "low", "format": {"type": "json_schema", "schema": schema}},
+        output_config={
+            "effort": settings.effort or "low",
+            "format": {"type": "json_schema", "schema": schema},
+        },
         messages=[{"role": "user", "content": user}],
     )
 
@@ -160,7 +165,8 @@ def call_claude(items: list[tuple[str, str]], target: str, settings) -> dict[str
         # Opus-tier safety classifiers can decline a request; let the server re-run it on the
         # recommended fallback model instead of losing the translation.
         response = client.beta.messages.create(
-            betas=["server-side-fallback-2026-07-01"], fallbacks="default",
+            betas=["server-side-fallback-2026-07-01"],
+            fallbacks="default",
             **build_request(items, target, settings),
         )
     except anthropic.AuthenticationError:
@@ -170,7 +176,9 @@ def call_claude(items: list[tuple[str, str]], target: str, settings) -> dict[str
         frappe.log_error(title="Chat Translate", message="Chat Translate: Claude rate limited")
         return None
     except anthropic.APIStatusError as e:
-        frappe.log_error(title="Chat Translate", message=f"Chat Translate: Claude API error {e.status_code}: {e.message}")
+        frappe.log_error(
+            title="Chat Translate", message=f"Chat Translate: Claude API error {e.status_code}: {e.message}"
+        )
         return None
     except anthropic.APIConnectionError:
         frappe.log_error(title="Chat Translate", message="Chat Translate: Claude connection error")
@@ -181,7 +189,10 @@ def call_claude(items: list[tuple[str, str]], target: str, settings) -> dict[str
         return None
 
     if response.stop_reason == "refusal":
-        frappe.log_error(title="Chat Translate", message=f"Chat Translate: refused ({getattr(response.stop_details, 'category', None)})")
+        frappe.log_error(
+            title="Chat Translate",
+            message=f"Chat Translate: refused ({getattr(response.stop_details, 'category', None)})",
+        )
         return None
     if response.stop_reason == "max_tokens":
         frappe.log_error(title="Chat Translate", message="Chat Translate: output truncated (max_tokens)")
@@ -216,10 +227,14 @@ def call_gemini(items: list[tuple[str, str]], target: str, settings) -> dict[str
             model=model_name(settings), contents=user, config=build_gemini_config(system, schema)
         )
     except errors.ClientError as e:  # 4xx: bad key, unknown model, quota
-        frappe.log_error(title="Chat Translate", message=f"Chat Translate: Gemini API error {e.code}: {e.message}")
+        frappe.log_error(
+            title="Chat Translate", message=f"Chat Translate: Gemini API error {e.code}: {e.message}"
+        )
         return None
     except errors.ServerError as e:
-        frappe.log_error(title="Chat Translate", message=f"Chat Translate: Gemini server error {e.code}: {e.message}")
+        frappe.log_error(
+            title="Chat Translate", message=f"Chat Translate: Gemini server error {e.code}: {e.message}"
+        )
         return None
     except Exception as e:  # missing key, network errors
         frappe.log_error(title="Chat Translate", message=f"Chat Translate: could not call Gemini: {e}")
@@ -227,12 +242,17 @@ def call_gemini(items: list[tuple[str, str]], target: str, settings) -> dict[str
 
     feedback = getattr(response, "prompt_feedback", None)
     if feedback and getattr(feedback, "block_reason", None):
-        frappe.log_error(title="Chat Translate", message=f"Chat Translate: Gemini blocked the request ({feedback.block_reason})")
+        frappe.log_error(
+            title="Chat Translate",
+            message=f"Chat Translate: Gemini blocked the request ({feedback.block_reason})",
+        )
         return None
     candidate = (response.candidates or [None])[0]
     reason = str(getattr(candidate, "finish_reason", "") or "")
     if reason.endswith("MAX_TOKENS"):
-        frappe.log_error(title="Chat Translate", message="Chat Translate: Gemini output truncated (MAX_TOKENS)")
+        frappe.log_error(
+            title="Chat Translate", message="Chat Translate: Gemini output truncated (MAX_TOKENS)"
+        )
         return None
     if reason and not reason.endswith("STOP"):
         frappe.log_error(title="Chat Translate", message=f"Chat Translate: Gemini stopped ({reason})")
@@ -244,8 +264,11 @@ def call_gemini(items: list[tuple[str, str]], target: str, settings) -> dict[str
 
 
 def _cached(names: list[str], lang: str) -> dict[str, str | None]:
-    rows = frappe.get_all("Chat Message Translation", filters={"message": ["in", names], "language": lang},
-                          fields=["message", "text", "source_language"])
+    rows = frappe.get_all(
+        "Chat Message Translation",
+        filters={"message": ["in", names], "language": lang},
+        fields=["message", "text", "source_language"],
+    )
     # a row whose source language equals the target means "already in this language": nothing to show
     return {r.message: (None if r.source_language == lang else r.text) for r in rows}
 
@@ -253,8 +276,15 @@ def _cached(names: list[str], lang: str) -> dict[str, str | None]:
 def _store(message: str, channel: str, lang: str, source: str | None, text: str | None, model: str | None):
     if frappe.db.exists("Chat Message Translation", {"message": message, "language": lang}):
         return  # another viewer cached it meanwhile
-    frappe.get_doc(dict(doctype="Chat Message Translation", message=message, chat_channel=channel,
-                        language=lang, source_language=source, text=text, model=model)).insert(ignore_permissions=True)
+    frappe.get_doc(
+        doctype="Chat Message Translation",
+        message=message,
+        chat_channel=channel,
+        language=lang,
+        source_language=source,
+        text=text,
+        model=model,
+    ).insert(ignore_permissions=True)
 
 
 def translate_for_user(names: list[str], user: str) -> dict[str, str]:
@@ -266,14 +296,30 @@ def translate_for_user(names: list[str], user: str) -> dict[str, str]:
         return {}
 
     docs = {}
-    for row in frappe.get_all("ClefinCode Chat Message", filters={"name": ["in", names]},
-                              fields=["name", "chat_channel", "sub_channel", "content", "is_deleted", "is_media",
-                                      "is_document", "is_voice_clip", "is_screenshot", "message_type",
-                                      "message_template_type"]):
+    for row in frappe.get_all(
+        "ClefinCode Chat Message",
+        filters={"name": ["in", names]},
+        fields=[
+            "name",
+            "chat_channel",
+            "sub_channel",
+            "content",
+            "is_deleted",
+            "is_media",
+            "is_document",
+            "is_voice_clip",
+            "is_screenshot",
+            "message_type",
+            "message_template_type",
+        ],
+    ):
         channel = row.sub_channel or row.chat_channel
         # never translate (and so reveal) a message from a channel the user cannot read
-        if user == "Administrator" or can_access_channel(channel, user) or (
-                row.chat_channel and can_access_channel(row.chat_channel, user)):
+        if (
+            user == "Administrator"
+            or can_access_channel(channel, user)
+            or (row.chat_channel and can_access_channel(row.chat_channel, user))
+        ):
             docs[row.name] = (row, channel)
 
     result = {}
@@ -289,7 +335,7 @@ def translate_for_user(names: list[str], user: str) -> dict[str, str]:
             _store(name, channel, lang, lang, None, None)  # remember: nothing to translate
 
     for start in range(0, len(todo), MAX_BATCH):
-        batch = todo[start:start + MAX_BATCH]
+        batch = todo[start : start + MAX_BATCH]
         translated = call_llm([(n, plain_text(docs[n][0].content)) for n in batch], lang, settings)
         if translated is None:
             break  # failure already logged; untranslated messages are retried on the next display
@@ -302,14 +348,14 @@ def translate_for_user(names: list[str], user: str) -> dict[str, str]:
             _store(name, docs[name][1], lang, source, text, model_name(settings))
             if text:
                 result[name] = text
-    frappe.db.commit()
     return result
 
 
 # ---------------------------------------------------------------- API for the chat screen
 
 
-@frappe.whitelist(allow_guest=False)
+# POST only: it fills the cache, and Frappe commits POST requests (not GET)
+@frappe.whitelist(allow_guest=False, methods=["POST"])
 def get_translations(message_names: str | list):
     """Translations in the session user's language for the given (visible) messages."""
     names = json.loads(message_names) if isinstance(message_names, str) else message_names
