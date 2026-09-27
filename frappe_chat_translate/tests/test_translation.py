@@ -1,10 +1,14 @@
-"""Display-time translation with caching, without calling Claude: `call_claude` is replaced by a
-stand-in that detects English/Japanese naively and prefixes the target language."""
+"""Display-time translation with caching, without calling a translation engine: `call_llm` (either
+engine) is replaced by a stand-in that detects English/Japanese naively and prefixes the target
+language."""
 
 from unittest.mock import patch
 
 import frappe
-from frappe.tests import IntegrationTestCase
+try:
+    from frappe.tests import IntegrationTestCase
+except ImportError:  # Frappe v15
+    from frappe.tests.utils import FrappeTestCase as IntegrationTestCase
 
 from frappe_chat_translate import translation as t
 from frappe_chat_translate.tests.test_guard import call, ensure_user, make_group
@@ -15,7 +19,7 @@ JA_USER_2 = "tr.ja2@example.com"
 OUTSIDER = "tr.out@example.com"
 
 
-def fake_claude(items, target, settings):
+def fake_engine(items, target, settings):
     out = {}
     for mid, text in items:
         source = "en" if text.isascii() else "ja"
@@ -55,8 +59,8 @@ class TestTranslation(IntegrationTestCase):
     def test_plain_text_strips_editor_html(self):
         self.assertEqual(t.plain_text("<p>こんにちは<br>BAL-001 &amp; <b>DOC</b></p>"), "こんにちは\nBAL-001 & DOC")
 
-    @patch("frappe_chat_translate.translation.call_claude", side_effect=fake_claude)
-    def test_everyone_reads_in_their_own_language(self, claude):
+    @patch("frappe_chat_translate.translation.call_llm", side_effect=fake_engine)
+    def test_everyone_reads_in_their_own_language(self, engine):
         english = self.send("<p>Please review the spec by Friday.</p>")
         self.assertEqual(get(JA_USER, english)[english], "[ja] Please review the spec by Friday.")
         self.assertEqual(get(VI_USER, english)[english], "[vi] Please review the spec by Friday.")
@@ -65,30 +69,30 @@ class TestTranslation(IntegrationTestCase):
         self.assertEqual(get(VI_USER, japanese)[japanese], "[vi] 金曜日までに仕様を確認してください。")
         self.assertNotIn(japanese, get(JA_USER, japanese))  # already in Japanese: nothing to show
 
-    @patch("frappe_chat_translate.translation.call_claude", side_effect=fake_claude)
-    def test_cache_is_shared_per_language(self, claude):
+    @patch("frappe_chat_translate.translation.call_llm", side_effect=fake_engine)
+    def test_cache_is_shared_per_language(self, engine):
         name = self.send("<p>The build is green.</p>")
         get(JA_USER, name)
-        calls = claude.call_count
+        calls = engine.call_count
         self.assertEqual(get(JA_USER_2, name)[name], "[ja] The build is green.")  # same language: cache
         get(JA_USER, name)
-        self.assertEqual(claude.call_count, calls)
+        self.assertEqual(engine.call_count, calls)
 
-    @patch("frappe_chat_translate.translation.call_claude", side_effect=fake_claude)
-    def test_batch_translates_several_messages_in_one_call(self, claude):
+    @patch("frappe_chat_translate.translation.call_llm", side_effect=fake_engine)
+    def test_batch_translates_several_messages_in_one_call(self, engine):
         names = [self.send(f"<p>Message number {i}</p>") for i in range(3)]
-        claude.reset_mock()
+        engine.reset_mock()
         result = get(VI_USER, *names)
         self.assertEqual(set(result), set(names))
-        self.assertEqual(claude.call_count, 1)
+        self.assertEqual(engine.call_count, 1)
 
-    @patch("frappe_chat_translate.translation.call_claude", side_effect=fake_claude)
-    def test_non_member_gets_nothing(self, claude):
+    @patch("frappe_chat_translate.translation.call_llm", side_effect=fake_engine)
+    def test_non_member_gets_nothing(self, engine):
         name = self.send("<p>Internal only.</p>")
         self.assertEqual(get(OUTSIDER, name), {})
 
-    @patch("frappe_chat_translate.translation.call_claude", side_effect=fake_claude)
-    def test_edit_clears_cache(self, claude):
+    @patch("frappe_chat_translate.translation.call_llm", side_effect=fake_engine)
+    def test_edit_clears_cache(self, engine):
         name = self.send("<p>Version one.</p>")
         get(VI_USER, name)
         frappe.set_user("Administrator")
@@ -132,7 +136,7 @@ class TestEngines(IntegrationTestCase):
         settings.gemini_model = ""
         settings.save(ignore_permissions=True)
         self.assertEqual(t.model_name(t.get_settings()), "gemini-2.5-flash")
-        with patch("frappe_chat_translate.translation.call_gemini", side_effect=fake_claude) as gemini, \
+        with patch("frappe_chat_translate.translation.call_gemini", side_effect=fake_engine) as gemini, \
                 patch("frappe_chat_translate.translation.call_claude") as claude:
             t.call_llm([("m1", "hello")], "ja", t.get_settings())
         gemini.assert_called_once()

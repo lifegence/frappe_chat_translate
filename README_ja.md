@@ -1,6 +1,6 @@
 # Frappe Chat Translate
 
-Frappe v16 の [ClefinCode Chat](https://github.com/clefincode/clefincode_chat) に機能を追加するアプリです。
+Frappe v15・v16 の [ClefinCode Chat](https://github.com/clefincode/clefincode_chat) に機能を追加するアプリです。
 
 - **リアルタイム翻訳**：参加者それぞれが、どの言語で書かれたメッセージも自分の言語で読めます。
   メッセージが画面に表示されたときに翻訳し、メッセージと言語の組ごとにキャッシュします。
@@ -17,9 +17,9 @@ ClefinCode Chat 本体は変更しません。本プロジェクトは ClefinCod
 
 | | 動作確認したバージョン |
 |---|---|
-| Frappe | v16（16.33.1） |
+| Frappe | v16（16.33.1、16.34.2）、v15（15.121.0） |
 | ClefinCode Chat | 1.3.913 |
-| Python | 3.12 以降 |
+| Python | 3.10 以降（v15 は 3.11、v16 は 3.12 で確認） |
 | 翻訳エンジン | Anthropic Claude または Google Gemini（API キーが必要） |
 
 ## インストール
@@ -95,6 +95,8 @@ ClefinCode の開発元には報告済みです。本アプリのセキュリテ
 - プッシュ通知とメール通知は、原文のままです。
 - 別のユーザーがメッセージを開いている間にそのメッセージが編集されると、ページを再読み込みするまで古い訳文が表示されます。
 - ウェブサイトユーザー向けのポータルのチャットは、API での確認のみで、ブラウザでは確認していません。
+- Frappe v15 では、ClefinCode Chat はデスクで画面の隅のボタンの代わりにナビゲーションバーのアイコンを表示します。
+  画像の設定はこのアイコンにも反映されますが、色・位置・大きさは反映されません。
 
 ## 開発
 

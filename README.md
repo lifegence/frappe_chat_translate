@@ -1,6 +1,6 @@
 # Frappe Chat Translate
 
-An add-on for [ClefinCode Chat](https://github.com/clefincode/clefincode_chat) on Frappe v16:
+An add-on for [ClefinCode Chat](https://github.com/clefincode/clefincode_chat) on Frappe v15 and v16:
 
 - **Real-time translation** - every participant reads every message in their own language, whatever
   language it was written in. Translations are made when a message is displayed and cached per
@@ -19,9 +19,9 @@ It does not modify ClefinCode Chat itself. This project is not affiliated with C
 
 | | Tested with |
 |---|---|
-| Frappe | v16 (16.33.1) |
+| Frappe | v16 (16.33.1, 16.34.2), v15 (15.121.0) |
 | ClefinCode Chat | 1.3.913 |
-| Python | 3.12 or later |
+| Python | 3.10 or later (tested with 3.11 on v15, 3.12 on v16) |
 | Translation engine | Anthropic Claude or Google Gemini (API key required) |
 
 ## Installation
@@ -105,6 +105,8 @@ Other users keep using the floating chat button.
 - If a message is edited while another user has it open, that user sees the old translation until
   the page is reloaded.
 - The portal chat for Website Users has been tested through the API, not in the browser.
+- On Frappe v15, ClefinCode Chat shows a chat icon in the navbar instead of the floating button in
+  the desk. The icon image setting applies to it; colour, position and size do not.
 
 ## Development
 

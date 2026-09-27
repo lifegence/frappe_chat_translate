@@ -71,6 +71,8 @@
 
   // Appearance of ClefinCode's floating chat button, from Chat Translate Settings. ClefinCode
   // re-renders the button when the panel opens and closes, so the icon is re-applied on changes.
+  // On Frappe v15 ClefinCode hides the button in the desk and shows a navbar icon instead: only
+  // the icon image applies there.
   function style_chat_button(button) {
     if (!button) return;
     const size = button.size || 56;
@@ -95,7 +97,8 @@
     style.textContent = css;
     if (!button.icon) return;
     const apply_icon = () => {
-      document.querySelectorAll("#chat-bubble .chat-bubble:not(.chat-bubble-closed) img").forEach((img) => {
+      const selector = "#chat-bubble .chat-bubble:not(.chat-bubble-closed) img, .chat-navbar-icon img";
+      document.querySelectorAll(selector).forEach((img) => {
         if (img.getAttribute("src") !== button.icon) img.setAttribute("src", button.icon);
       });
     };
@@ -117,15 +120,17 @@
 
   // Open ClefinCode's chat panel on the current page. ClefinCode binds the bubble's click handler
   // some time after the bubble appears, so a click right away is lost: click, check that the
-  // panel (.chat-container) opened, retry if not.
+  // panel (.chat-container) opened, retry if not. On Frappe v15 the desk entry point is the navbar
+  // icon (the bubble is hidden there).
   function open_chat_panel() {
     const shown = (el) =>
       !!el && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden";
     let tries = 0;
     const timer = setInterval(() => {
       if (shown(document.querySelector(".chat-container")) || ++tries > 20) return clearInterval(timer);
-      const bubble = document.getElementById("chat-bubble");
-      if (shown(bubble)) bubble.click();
+      const bubble = document.querySelector("#chat-bubble .chat-bubble");
+      const target = shown(bubble) ? bubble : document.querySelector(".chat-navbar-icon");
+      if (shown(target)) target.click();
     }, 700);
   }
 
@@ -163,6 +168,24 @@
     };
   }
 
+  // Frappe v15's shortcut widget navigates with window.location.href, and v15 redirects /desk to
+  // /app without the query string: make chat shortcuts open the panel instead of navigating.
+  // Patched at load, before any workspace renders its widgets (again in init, in case the desk
+  // widgets were not defined yet).
+  function patch_shortcut_widget() {
+    const factory = window.frappe && frappe.widget && frappe.widget.widget_factory;
+    const Shortcut = factory && factory.shortcut;
+    if (!Shortcut || Shortcut.prototype.__ct_patched) return;
+    const original = Shortcut.prototype.setup_events;
+    Shortcut.prototype.setup_events = function () {
+      if (this.type !== "URL" || !is_chat_url(this.url)) return original.apply(this, arguments);
+      this.widget.click(() => {
+        if (!this.in_customize_mode) open_chat_panel();
+      });
+    };
+    Shortcut.prototype.__ct_patched = true;
+  }
+
   // a direct visit to /desk?chat=1 (bookmark, old icon) also opens the panel
   function open_chat_from_url() {
     const params = new URLSearchParams(window.location.search);
@@ -174,11 +197,13 @@
   }
 
   function init() {
+    patch_shortcut_widget();
     intercept_chat_links();
     open_chat_from_url();
     frappe.call({ method: METHOD + "get_client_settings", callback: (r) => start(r && r.message) });
   }
 
+  patch_shortcut_widget();
   const run = () => whenReady(init);
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", run);
   else run();

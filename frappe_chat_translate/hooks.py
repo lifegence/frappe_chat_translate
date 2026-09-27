@@ -27,3 +27,19 @@ web_include_js = "frappe_chat_translate.bundle.js"
 
 after_install = "frappe_chat_translate.install.ensure_chat_icon"
 after_migrate = "frappe_chat_translate.install.ensure_chat_icon"
+
+# Frappe v15 has no standard Desktop Icon / Workspace Sidebar (v16 uses desktop_icon/ and
+# workspace_sidebar/ in this app); list the Chat workspace on the v15 apps screen instead.
+# Not declared on v16, where it would add a second, App-type icon.
+import frappe as _frappe
+
+if int(_frappe.__version__.split(".")[0]) < 16:
+    add_to_apps_screen = [
+        {
+            "name": "frappe_chat_translate",
+            "logo": "/assets/frappe_chat_translate/images/chat.svg",
+            "title": "Chat",
+            "route": "/app/chat",
+            "has_permission": "frappe_chat_translate.install.can_manage_chat",
+        }
+    ]
