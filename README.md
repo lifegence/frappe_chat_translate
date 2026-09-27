@@ -67,6 +67,8 @@ The text of chat messages is sent to the translation engine you choose. Use an A
 fit your data (for example, one that does not use your data for training). The API keys are stored
 encrypted in the site database.
 
+Nothing is sent to Lifegence. See [PRIVACY.md](PRIVACY.md) for details.
+
 ## Access control hardening
 
 In ClefinCode Chat 1.3.913, many whitelisted API methods take the acting user and the channel from
