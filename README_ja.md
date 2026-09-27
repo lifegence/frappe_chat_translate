@@ -20,7 +20,7 @@ ClefinCode Chat 本体は変更しません。本プロジェクトは ClefinCod
 | Frappe | v16（16.33.1、16.34.2）、v15（15.121.0） |
 | ClefinCode Chat | 1.3.913 |
 | Python | 3.10 以降（v15 は 3.11、v16 は 3.14 で確認） |
-| 翻訳エンジン | Anthropic Claude または Google Gemini（API キーが必要） |
+| 翻訳エンジン | Anthropic Claude、Google Gemini、または OpenAI・OpenAI 互換のサービス（API キーが必要） |
 
 ## インストール
 
@@ -38,8 +38,10 @@ bench restart
 | 項目 | 内容 |
 |---|---|
 | Enabled | 全員の翻訳を有効にする |
-| 翻訳エンジン | `Anthropic Claude`（既定のモデルは `claude-opus-5`）または `Google Gemini`（既定のモデルは `gemini-2.5-flash`） |
-| API キー | 暗号化して保存します。空欄なら環境変数 `ANTHROPIC_API_KEY`、`GEMINI_API_KEY` / `GOOGLE_API_KEY` を使います |
+| 翻訳エンジン | `Anthropic Claude`（既定のモデルは `claude-opus-5`）、`Google Gemini`（既定のモデルは `gemini-2.5-flash`）、`OpenAI`（既定のモデルは `gpt-6-sol`） |
+| API キー | 暗号化して保存します。空欄なら環境変数 `ANTHROPIC_API_KEY`、`GEMINI_API_KEY` / `GOOGLE_API_KEY`、`OPENAI_API_KEY` を使います |
+| Base URL（OpenAI） | 任意。Azure OpenAI や自社サーバーなど、OpenAI 互換の Chat Completions の接続先。指定した場合、モデル欄にはそのサービスのモデル名・デプロイ名を入れます |
+| Effort | Claude と、Base URL を指定しない OpenAI で使います。訳のニュアンスが不足する場合に上げます |
 | 対象言語の絞り込み | 任意。空欄なら全ユーザーの言語に翻訳します |
 | 翻訳の前提 | 任意。誰と誰の会話か。口調や用語の選び方の参考にします |
 | 用語集 | 1行に1件。`用語` は訳さずに残し、`用語 => 訳語` は訳語を固定します |
@@ -99,6 +101,8 @@ ClefinCode の開発元には報告済みです。本アプリのセキュリテ
 - ウェブサイトユーザー向けのポータルのチャットは、API での確認のみで、ブラウザでは確認していません。
 - Frappe v15 では、ClefinCode Chat はデスクで画面の隅のボタンの代わりにナビゲーションバーのアイコンを表示します。
   画像の設定はこのアイコンにも反映されますが、色・位置・大きさは反映されません。
+- OpenAI 互換のサービスには、構造化出力（JSON スキーマ）で依頼し、サービスが対応していなければ JSON モードで1回だけ再試行します。
+  実際の通信で確認したのは Google の OpenAI 互換エンドポイントのみで、OpenAI 本体・Azure OpenAI・自社サーバーは模擬のクライアントでの確認です。
 
 ## 開発
 

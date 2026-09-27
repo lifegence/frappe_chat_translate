@@ -1,6 +1,6 @@
-"""Display-time translation with caching, without calling a translation engine: `call_llm` (either
+"""Display-time translation with caching, without calling a translation engine: `call_llm` (any
 engine) is replaced by a stand-in that detects English/Japanese naively and prefixes the target
-language."""
+language. The OpenAI engine is tested against a mocked client."""
 
 from unittest.mock import patch
 
@@ -166,3 +166,112 @@ class TestEngines(IntegrationTestCase):
             t.call_llm([("m1", "hello")], "ja", t.get_settings())
         gemini.assert_called_once()
         claude.assert_not_called()
+
+
+class OpenAISettings(frappe._dict):
+    """Settings stand-in for the OpenAI engine (no database)."""
+
+    def get_password(self, fieldname, raise_exception=True):
+        return self.get(fieldname)
+
+
+def openai_settings(**values):
+    defaults = dict(
+        provider="OpenAI",
+        openai_api_key="test-key",
+        openai_model="",
+        openai_base_url="",
+        effort="low",
+        glossary="",
+        translation_context="",
+    )
+    return OpenAISettings({**defaults, **values})
+
+
+def openai_response(content, finish_reason="stop", refusal=None):
+    message = frappe._dict(content=content, refusal=refusal)
+    return frappe._dict(choices=[frappe._dict(message=message, finish_reason=finish_reason)])
+
+
+def bad_request():
+    import httpx
+    import openai
+
+    response = httpx.Response(400, request=httpx.Request("POST", "http://test/v1/chat/completions"))
+    return openai.BadRequestError("response_format is not supported", response=response, body=None)
+
+
+TRANSLATED = '{"items": [{"id": "m1", "source_language": "en", "text": "[ja] hello"}]}'
+
+
+class TestOpenAI(IntegrationTestCase):
+    def test_default_model(self):
+        self.assertEqual(t.model_name(openai_settings()), "gpt-6-sol")
+        self.assertEqual(t.model_name(openai_settings(openai_model="my-deployment")), "my-deployment")
+
+    def test_request_uses_structured_output_and_effort(self):
+        req = t.build_openai_request([("m1", "hi")], "ja", openai_settings())
+        self.assertEqual(req["response_format"]["type"], "json_schema")
+        self.assertTrue(req["response_format"]["json_schema"]["strict"])
+        self.assertEqual(req["reasoning_effort"], "low")
+        self.assertEqual(req["max_completion_tokens"], 16000)
+        self.assertEqual([m["role"] for m in req["messages"]], ["system", "user"])
+
+    def test_base_url_request_leaves_out_effort(self):
+        req = t.build_openai_request([("m1", "hi")], "ja", openai_settings(openai_base_url="http://llm/v1"))
+        self.assertNotIn("reasoning_effort", req)
+        self.assertEqual(req["response_format"]["type"], "json_schema")
+
+    def test_json_mode_request_carries_schema_in_instructions(self):
+        req = t.build_openai_request([("m1", "hi")], "ja", openai_settings(), strict=False)
+        self.assertEqual(req["response_format"], {"type": "json_object"})
+        self.assertEqual(req["max_tokens"], 16000)
+        self.assertNotIn("max_completion_tokens", req)
+        self.assertIn('"source_language"', req["messages"][0]["content"])
+
+    def test_engine_follows_settings(self):
+        with (
+            patch("frappe_chat_translate.translation.call_openai", side_effect=fake_engine) as engine,
+            patch("frappe_chat_translate.translation.call_claude") as claude,
+        ):
+            t.call_llm([("m1", "hello")], "ja", openai_settings())
+        engine.assert_called_once()
+        claude.assert_not_called()
+
+    @patch("openai.OpenAI")
+    def test_translates(self, client_class):
+        create = client_class.return_value.chat.completions.create
+        create.return_value = openai_response(TRANSLATED)
+        rows = t.call_openai([("m1", "hello")], "ja", openai_settings())
+        self.assertEqual(rows["m1"]["text"], "[ja] hello")
+        self.assertEqual(client_class.call_args.kwargs["base_url"], None)
+
+    @patch("openai.OpenAI")
+    def test_compatible_server_falls_back_to_json_mode(self, client_class):
+        create = client_class.return_value.chat.completions.create
+        create.side_effect = [bad_request(), openai_response("```json\n" + TRANSLATED + "\n```")]
+        rows = t.call_openai([("m1", "hello")], "ja", openai_settings(openai_base_url="http://llm/v1"))
+        self.assertEqual(rows["m1"]["text"], "[ja] hello")
+        self.assertEqual(create.call_count, 2)
+        self.assertEqual(create.call_args.kwargs["response_format"], {"type": "json_object"})
+        self.assertEqual(client_class.call_args.kwargs["base_url"], "http://llm/v1")
+
+    @patch("openai.OpenAI")
+    def test_openai_bad_request_is_not_retried(self, client_class):
+        create = client_class.return_value.chat.completions.create
+        create.side_effect = bad_request()
+        self.assertIsNone(t.call_openai([("m1", "hello")], "ja", openai_settings()))
+        self.assertEqual(create.call_count, 1)
+
+    @patch("openai.OpenAI")
+    def test_refusal_and_truncation_give_nothing(self, client_class):
+        create = client_class.return_value.chat.completions.create
+        create.return_value = openai_response(None, refusal="I can't help with that.")
+        self.assertIsNone(t.call_openai([("m1", "hello")], "ja", openai_settings()))
+        create.return_value = openai_response('{"items": [', finish_reason="length")
+        self.assertIsNone(t.call_openai([("m1", "hello")], "ja", openai_settings()))
+
+    def test_missing_key_is_logged_not_raised(self):
+        with patch.dict("os.environ", {}, clear=False) as env:
+            env.pop("OPENAI_API_KEY", None)
+            self.assertIsNone(t.call_openai([("m1", "hello")], "ja", openai_settings(openai_api_key=None)))

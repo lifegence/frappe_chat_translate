@@ -11,6 +11,9 @@
   "effort",
   "gemini_api_key",
   "gemini_model",
+  "openai_api_key",
+  "openai_model",
+  "openai_base_url",
   "column_break_1",
   "languages",
   "section_glossary",
@@ -37,7 +40,7 @@
    "fieldname": "provider",
    "fieldtype": "Select",
    "label": "Translation Engine",
-   "options": "Anthropic Claude\nGoogle Gemini"
+   "options": "Anthropic Claude\nGoogle Gemini\nOpenAI"
   },
   {
    "description": "Leave empty to use the ANTHROPIC_API_KEY environment variable.",
@@ -55,12 +58,12 @@
   },
   {
    "default": "low",
-   "description": "Lower effort answers faster; raise it if translations miss nuance.",
+   "description": "Lower effort answers faster; raise it if translations miss nuance. OpenAI: sent only when Base URL is empty.",
    "fieldname": "effort",
    "fieldtype": "Select",
    "label": "Effort",
    "options": "low\nmedium\nhigh",
-   "depends_on": "eval:doc.provider==\"Anthropic Claude\""
+   "depends_on": "eval:[\"Anthropic Claude\",\"OpenAI\"].includes(doc.provider)"
   },
   {
    "depends_on": "eval:doc.provider==\"Google Gemini\"",
@@ -75,6 +78,28 @@
    "fieldname": "gemini_model",
    "fieldtype": "Data",
    "label": "Gemini Model"
+  },
+  {
+   "fieldname": "openai_api_key",
+   "fieldtype": "Password",
+   "label": "OpenAI API Key",
+   "depends_on": "eval:doc.provider==\"OpenAI\"",
+   "description": "Leave empty to use the OPENAI_API_KEY environment variable."
+  },
+  {
+   "fieldname": "openai_model",
+   "fieldtype": "Data",
+   "label": "OpenAI Model",
+   "default": "gpt-6-sol",
+   "depends_on": "eval:doc.provider==\"OpenAI\"",
+   "description": "With a Base URL, the model or deployment name of that service."
+  },
+  {
+   "fieldname": "openai_base_url",
+   "fieldtype": "Data",
+   "label": "Base URL",
+   "depends_on": "eval:doc.provider==\"OpenAI\"",
+   "description": "Optional. An OpenAI-compatible Chat Completions endpoint (e.g. Azure OpenAI, a self-hosted server). Empty = OpenAI."
   },
   {
    "fieldname": "column_break_1",

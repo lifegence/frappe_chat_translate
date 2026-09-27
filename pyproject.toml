@@ -6,7 +6,7 @@ license = { text = "GPL-3.0-or-later" }
 requires-python = ">=3.10"
 readme = "README.md"
 dynamic = ["version"]
-dependencies = ["anthropic>=1,<2", "google-genai>=1,<2"]
+dependencies = ["anthropic>=1,<2", "google-genai>=1,<2", "openai>=1.60,<4"]
 
 [build-system]
 requires = ["flit_core >=3.4,<4"]
