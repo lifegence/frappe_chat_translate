@@ -89,7 +89,9 @@ def _whitelisted_functions(path: Path):
 def _make_wrapper(method: str, fn_name: str, allow_guest: bool):
     def wrapper(*args, **kwargs):
         check_access(fn_name, kwargs)
-        return frappe.call(frappe.get_attr(method), *args, **kwargs)
+        # `method` is fixed when the wrappers are built, from ClefinCode Chat's source files (never
+        # from the request): call the original whitelisted method after the checks
+        return frappe.call(frappe.get_attr(method), *args, **kwargs)  # nosemgrep
 
     wrapper.__name__ = f"guarded_{fn_name}"
     wrapper.__doc__ = f"Access-checked wrapper for {method}"
@@ -135,7 +137,11 @@ def _looks_like_user(value) -> bool:
 
 def can_access_channel(channel: str, user: str) -> bool:
     """Member or contributor of the channel, or of its parent channel. Unknown channels hold no data."""
-    if not isinstance(channel, str) or not channel or not frappe.db.exists("ClefinCode Chat Channel", channel):
+    if (
+        not isinstance(channel, str)
+        or not channel
+        or not frappe.db.exists("ClefinCode Chat Channel", channel)
+    ):
         return True
     channels = [channel]
     parent = frappe.db.get_value("ClefinCode Chat Channel", channel, "parent_channel")
@@ -179,7 +185,9 @@ def check_access(fn_name: str, params: dict):
 
     message = params.get("message_name")
     if message and isinstance(message, str):
-        row = frappe.db.get_value("ClefinCode Chat Message", message, ["chat_channel", "sub_channel"], as_dict=True)
+        row = frappe.db.get_value(
+            "ClefinCode Chat Message", message, ["chat_channel", "sub_channel"], as_dict=True
+        )
         if row and not any(c and can_access_channel(c, user) for c in (row.chat_channel, row.sub_channel)):
             return _deny(fn_name, f"message_name={message}")
 

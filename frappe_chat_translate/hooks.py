@@ -1,3 +1,5 @@
+import frappe as _frappe
+
 from frappe_chat_translate.security.guard import get_overrides
 
 app_name = "frappe_chat_translate"
@@ -31,8 +33,6 @@ after_migrate = "frappe_chat_translate.install.ensure_chat_icon"
 # Frappe v15 has no standard Desktop Icon / Workspace Sidebar (v16 uses desktop_icon/ and
 # workspace_sidebar/ in this app); list the Chat workspace on the v15 apps screen instead.
 # Not declared on v16, where it would add a second, App-type icon.
-import frappe as _frappe
-
 if int(_frappe.__version__.split(".")[0]) < 16:
     add_to_apps_screen = [
         {

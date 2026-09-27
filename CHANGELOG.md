@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.1 - 2026-09-27
+
+Preparation for the Frappe Cloud Marketplace.
+
+- CI on GitHub Actions: tests on Frappe v15 and v16, pre-commit (ruff), Semgrep with the Frappe and
+  marketplace rules, pip-audit.
+- `pyproject.toml` declares the supported Frappe and ClefinCode Chat versions
+  (`[tool.bench.frappe-dependencies]`).
+- `get_translations` accepts POST only and no longer commits by hand (Frappe commits POST requests).
+- Tests use a role of their own instead of ERPNext's, so they run on a Frappe-only site.
+- Code formatted with ruff.
+
 ## 0.2.0 - 2026-09-27
 
 - Frappe v15 support (tested with 15.121.0, Python 3.11):
