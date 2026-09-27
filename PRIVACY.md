@@ -17,11 +17,14 @@ To translate, the app sends the text of chat messages, the reader's language, an
 translation context set by your administrator to the translation engine chosen by your site
 administrator:
 
-- Anthropic (Claude API), or
-- Google (Gemini API).
+- Anthropic (Claude API),
+- Google (Gemini API), or
+- OpenAI (OpenAI API), or another OpenAI-compatible service at the address your administrator
+  configures (for example Azure OpenAI or a server you run yourself).
 
 Messages are sent when they are displayed to a reader whose language differs from the message, using
-the API key configured on your site. The provider's terms and privacy policy apply to that data.
+the API key configured on your site. The provider's terms and privacy policy apply to that data;
+with a self-hosted service, the data stays on the servers you run.
 Choose an API plan whose terms fit your data, for example one that does not use your data for
 training. Attachments, voice clips and images are not sent.
 

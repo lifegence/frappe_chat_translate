@@ -22,7 +22,7 @@ It does not modify ClefinCode Chat itself. This project is not affiliated with C
 | Frappe | v16 (16.33.1, 16.34.2), v15 (15.121.0) |
 | ClefinCode Chat | 1.3.913 |
 | Python | 3.10 or later (tested with 3.11 on v15, 3.14 on v16) |
-| Translation engine | Anthropic Claude or Google Gemini (API key required) |
+| Translation engine | Anthropic Claude, Google Gemini, or OpenAI / an OpenAI-compatible service (API key required) |
 
 ## Installation
 
@@ -40,8 +40,10 @@ Open **Chat > Settings > Translation Settings** (DocType `Chat Translate Setting
 | Setting | Notes |
 |---|---|
 | Enabled | Turns translation on for everyone |
-| Translation Engine | `Anthropic Claude` (default model `claude-opus-5`) or `Google Gemini` (default model `gemini-2.5-flash`) |
-| API keys | Stored encrypted. Leave empty to use `ANTHROPIC_API_KEY`, or `GEMINI_API_KEY` / `GOOGLE_API_KEY` |
+| Translation Engine | `Anthropic Claude` (default model `claude-opus-5`), `Google Gemini` (default model `gemini-2.5-flash`) or `OpenAI` (default model `gpt-6-sol`) |
+| API keys | Stored encrypted. Leave empty to use `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` / `GOOGLE_API_KEY`, or `OPENAI_API_KEY` |
+| Base URL (OpenAI) | Optional. An OpenAI-compatible Chat Completions endpoint, e.g. Azure OpenAI or a self-hosted server; the model field then takes that service's model or deployment name |
+| Effort | Claude, and OpenAI without a Base URL. Raise it if translations miss nuance |
 | Restrict to Languages | Optional. Empty = every user's language is served |
 | Translation Context | Optional. Who is talking to whom; helps with tone and terms |
 | Glossary | One entry per line. `term` keeps it untranslated, `term => rendering` fixes the rendering |
@@ -109,6 +111,9 @@ Other users keep using the floating chat button.
 - The portal chat for Website Users has been tested through the API, not in the browser.
 - On Frappe v15, ClefinCode Chat shows a chat icon in the navbar instead of the floating button in
   the desk. The icon image setting applies to it; colour, position and size do not.
+- OpenAI-compatible services: the request uses structured output (JSON schema) and, if the service
+  rejects it, is retried once in JSON mode. Tested with Google's OpenAI-compatible endpoint; the
+  OpenAI API itself, Azure OpenAI and self-hosted servers have been tested with a mocked client only.
 
 ## Development
 

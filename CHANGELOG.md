@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0 - 2026-09-27
+
+- OpenAI as a third translation engine (Chat Completions, structured output; default model
+  `gpt-6-sol`), with an optional Base URL for OpenAI-compatible services such as Azure OpenAI or a
+  self-hosted server. A service that rejects structured output is retried once in JSON mode.
+- The Effort setting also applies to OpenAI (without a Base URL).
+- New dependency: `openai>=1.60,<4`.
+
 ## 0.2.1 - 2026-09-27
 
 Preparation for the Frappe Cloud Marketplace.

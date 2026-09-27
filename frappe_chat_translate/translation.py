@@ -64,12 +64,18 @@ def on_message_update(doc, method=None):
 
 # ---------------------------------------------------------------- translation engines
 
-DEFAULT_MODELS = {"Anthropic Claude": "claude-opus-5", "Google Gemini": "gemini-2.5-flash"}
+DEFAULT_MODELS = {
+    "Anthropic Claude": "claude-opus-5",
+    "Google Gemini": "gemini-2.5-flash",
+    "OpenAI": "gpt-6-sol",
+}
 
 
 def model_name(settings) -> str:
     if settings.provider == "Google Gemini":
         return settings.gemini_model or DEFAULT_MODELS["Google Gemini"]
+    if settings.provider == "OpenAI":
+        return settings.openai_model or DEFAULT_MODELS["OpenAI"]
     return settings.model or DEFAULT_MODELS["Anthropic Claude"]
 
 
@@ -123,6 +129,9 @@ def build_prompt(items: list[tuple[str, str]], target: str, settings) -> tuple[s
 
 
 def _rows(text: str | None) -> dict[str, dict] | None:
+    text = (text or "").strip()
+    if text.startswith("```"):  # engines without structured output may fence their JSON
+        text = text.split("\n", 1)[-1].rsplit("```", 1)[0]
     try:
         data = json.loads(text) if text else None
     except json.JSONDecodeError:
@@ -136,6 +145,8 @@ def call_llm(items: list[tuple[str, str]], target: str, settings) -> dict[str, d
     Returns {message id: {"source_language": str, "text": str}} or None on failure (already logged)."""
     if settings.provider == "Google Gemini":
         return call_gemini(items, target, settings)
+    if settings.provider == "OpenAI":
+        return call_openai(items, target, settings)
     return call_claude(items, target, settings)
 
 
@@ -258,6 +269,84 @@ def call_gemini(items: list[tuple[str, str]], target: str, settings) -> dict[str
         frappe.log_error(title="Chat Translate", message=f"Chat Translate: Gemini stopped ({reason})")
         return None
     return _rows(response.text)
+
+
+# ---------------------------------------------------------------- OpenAI (and compatible services)
+
+
+def build_openai_request(items: list[tuple[str, str]], target: str, settings, strict: bool = True) -> dict:
+    """Chat Completions request. `strict`: structured output with the JSON schema (OpenAI, Azure OpenAI).
+    Otherwise JSON mode with the schema in the instructions, for compatible servers without
+    structured output."""
+    system, user, schema = build_prompt(items, target, settings)
+    request = dict(model=model_name(settings))
+    if strict:
+        request["max_completion_tokens"] = 16000
+        request["response_format"] = {
+            "type": "json_schema",
+            "json_schema": {"name": "translations", "schema": schema, "strict": True},
+        }
+        if not settings.openai_base_url:
+            request["reasoning_effort"] = settings.effort or "low"
+    else:
+        system += "\nAnswer with JSON only, matching this JSON schema:\n" + json.dumps(schema)
+        request["response_format"] = {"type": "json_object"}
+        request["max_tokens"] = 16000  # older compatible servers know only max_tokens
+    request["messages"] = [{"role": "system", "content": system}, {"role": "user", "content": user}]
+    return request
+
+
+def call_openai(items: list[tuple[str, str]], target: str, settings) -> dict[str, dict] | None:
+    import openai
+
+    # empty key: the SDK falls back to the OPENAI_API_KEY environment variable
+    api_key = settings.get_password("openai_api_key", raise_exception=False) or None
+    base_url = (settings.openai_base_url or "").strip() or None
+    try:
+        client = openai.OpenAI(api_key=api_key, base_url=base_url, timeout=60.0, max_retries=2)
+        try:
+            response = client.chat.completions.create(**build_openai_request(items, target, settings))
+        except openai.BadRequestError:
+            if not base_url:
+                raise
+            # a compatible server that rejects structured output: retry once in JSON mode
+            response = client.chat.completions.create(
+                **build_openai_request(items, target, settings, strict=False)
+            )
+    except openai.AuthenticationError:
+        frappe.log_error(title="Chat Translate", message="Chat Translate: invalid OpenAI API key")
+        return None
+    except openai.RateLimitError:
+        frappe.log_error(title="Chat Translate", message="Chat Translate: OpenAI rate limited")
+        return None
+    except openai.APIStatusError as e:
+        frappe.log_error(
+            title="Chat Translate", message=f"Chat Translate: OpenAI API error {e.status_code}: {e.message}"
+        )
+        return None
+    except openai.APIConnectionError:
+        frappe.log_error(title="Chat Translate", message="Chat Translate: OpenAI connection error")
+        return None
+    except openai.OpenAIError as e:  # e.g. no API key configured and none in the environment
+        frappe.log_error(title="Chat Translate", message=f"Chat Translate: could not call OpenAI: {e}")
+        return None
+
+    choice = (response.choices or [None])[0]
+    if choice is None:
+        frappe.log_error(title="Chat Translate", message="Chat Translate: OpenAI returned no choices")
+        return None
+    if getattr(choice.message, "refusal", None):
+        frappe.log_error(title="Chat Translate", message="Chat Translate: OpenAI refused the request")
+        return None
+    if choice.finish_reason == "length":
+        frappe.log_error(title="Chat Translate", message="Chat Translate: OpenAI output truncated (length)")
+        return None
+    if choice.finish_reason == "content_filter":
+        frappe.log_error(
+            title="Chat Translate", message="Chat Translate: OpenAI content filter stopped the output"
+        )
+        return None
+    return _rows(choice.message.content)
 
 
 # ---------------------------------------------------------------- cache
