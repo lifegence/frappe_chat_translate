@@ -316,8 +316,10 @@ def call_openai(items: list[tuple[str, str]], target: str, settings) -> dict[str
     except openai.AuthenticationError:
         frappe.log_error(title="Chat Translate", message="Chat Translate: invalid OpenAI API key")
         return None
-    except openai.RateLimitError:
-        frappe.log_error(title="Chat Translate", message="Chat Translate: OpenAI rate limited")
+    except openai.RateLimitError as e:
+        # 429 covers both rate limits and an exhausted balance (code "insufficient_quota")
+        reason = "no credits left" if e.code == "insufficient_quota" else "rate limited"
+        frappe.log_error(title="Chat Translate", message=f"Chat Translate: OpenAI {reason} ({e.code})")
         return None
     except openai.APIStatusError as e:
         frappe.log_error(

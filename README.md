@@ -112,8 +112,8 @@ Other users keep using the floating chat button.
 - On Frappe v15, ClefinCode Chat shows a chat icon in the navbar instead of the floating button in
   the desk. The icon image setting applies to it; colour, position and size do not.
 - OpenAI-compatible services: the request uses structured output (JSON schema) and, if the service
-  rejects it, is retried once in JSON mode. Tested with Google's OpenAI-compatible endpoint; the
-  OpenAI API itself, Azure OpenAI and self-hosted servers have been tested with a mocked client only.
+  rejects it, is retried once in JSON mode. Tested live with the OpenAI API and Google's
+  OpenAI-compatible endpoint; Azure OpenAI and self-hosted servers with a mocked client only.
 
 ## Development
 
