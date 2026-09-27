@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.1 - 2026-09-27
+
+- OpenAI: an exhausted balance (`insufficient_quota`) is logged as such instead of "rate limited".
+- OpenAI engine tested live (gpt-6-sol, gpt-6-luna).
+
 ## 0.3.0 - 2026-09-27
 
 - OpenAI as a third translation engine (Chat Completions, structured output; default model

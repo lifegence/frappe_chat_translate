@@ -275,3 +275,17 @@ class TestOpenAI(IntegrationTestCase):
         with patch.dict("os.environ", {}, clear=False) as env:
             env.pop("OPENAI_API_KEY", None)
             self.assertIsNone(t.call_openai([("m1", "hello")], "ja", openai_settings(openai_api_key=None)))
+
+    @patch("openai.OpenAI")
+    def test_exhausted_balance_is_logged_as_such(self, client_class):
+        import httpx
+        import openai
+
+        response = httpx.Response(429, request=httpx.Request("POST", "http://test/v1/chat/completions"))
+        error = openai.RateLimitError(
+            "You have no credits remaining.", response=response, body={"code": "insufficient_quota"}
+        )
+        client_class.return_value.chat.completions.create.side_effect = error
+        with patch("frappe.log_error") as log_error:
+            self.assertIsNone(t.call_openai([("m1", "hello")], "ja", openai_settings()))
+        self.assertIn("no credits left", log_error.call_args.kwargs["message"])
