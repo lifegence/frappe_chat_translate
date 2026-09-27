@@ -1,0 +1,17 @@
+[project]
+name = "frappe_chat_translate"
+authors = [{ name = "Lifegence Corporation", email = "contact@lifegence.com" }]
+description = "Access control hardening and real-time message translation for ClefinCode Chat"
+license = { text = "GPL-3.0-or-later" }
+requires-python = ">=3.12"
+readme = "README.md"
+dynamic = ["version"]
+dependencies = ["anthropic>=1,<2", "google-genai>=1,<2"]
+
+[build-system]
+requires = ["flit_core >=3.4,<4"]
+build-backend = "flit_core.buildapi"
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"

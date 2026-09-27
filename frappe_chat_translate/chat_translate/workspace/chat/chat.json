@@ -1,0 +1,135 @@
+{
+ "app": "frappe_chat_translate",
+ "charts": [],
+ "content": "[{\"id\": \"ct-h1\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Chat</b></span>\", \"col\": 12}}, {\"id\": \"ct-s1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Open Chat\", \"col\": 3}}, {\"id\": \"ct-sp\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"ct-c1\", \"type\": \"card\", \"data\": {\"card_name\": \"History\", \"col\": 4}}, {\"id\": \"ct-c2\", \"type\": \"card\", \"data\": {\"card_name\": \"Settings\", \"col\": 4}}]",
+ "creation": "2026-09-27 09:00:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "message-circle",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "Chat",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "History",
+   "link_count": 4,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Channels",
+   "link_count": 0,
+   "link_to": "ClefinCode Chat Channel",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Messages",
+   "link_count": 0,
+   "link_to": "ClefinCode Chat Message",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Topics",
+   "link_count": 0,
+   "link_to": "ClefinCode Chat Topic",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Translations",
+   "link_count": 0,
+   "link_to": "Chat Message Translation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Settings",
+   "link_count": 3,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Chat Settings",
+   "link_count": 0,
+   "link_to": "ClefinCode Chat Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Translation Settings",
+   "link_count": 0,
+   "link_to": "Chat Translate Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Chat Profiles",
+   "link_count": 0,
+   "link_to": "ClefinCode Chat Profile",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-09-27 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Chat Translate",
+ "name": "Chat",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": "",
+ "roles": [
+  {
+   "doctype": "Has Role",
+   "role": "System Manager"
+  },
+  {
+   "doctype": "Has Role",
+   "role": "Chat Administrator"
+  }
+ ],
+ "sequence_id": 1.0,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "",
+   "label": "Open Chat",
+   "type": "URL",
+   "url": "/desk?chat=1"
+  }
+ ],
+ "title": "Chat",
+ "type": "Workspace"
+}

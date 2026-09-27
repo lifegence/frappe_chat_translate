@@ -1,0 +1,61 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: ja\n"
+
+msgid "Chat"
+msgstr "チャット"
+
+msgid "Open Chat"
+msgstr "チャットを開く"
+
+msgid "History"
+msgstr "履歴"
+
+msgid "Channels"
+msgstr "チャンネル"
+
+msgid "Messages"
+msgstr "メッセージ"
+
+msgid "Topics"
+msgstr "トピック"
+
+msgid "Translations"
+msgstr "翻訳キャッシュ"
+
+msgid "Settings"
+msgstr "設定"
+
+msgid "Chat Settings"
+msgstr "チャット設定"
+
+msgid "Translation Settings"
+msgstr "翻訳設定"
+
+msgid "Chat Profiles"
+msgstr "チャットのプロフィール"
+
+msgid "Machine translation (click to hide)"
+msgstr "機械翻訳（クリックで非表示）"
+msgid "Chat Button"
+msgstr "チャットボタン"
+
+msgid "Button Icon"
+msgstr "ボタンのアイコン"
+
+msgid "Button Color"
+msgstr "ボタンの色"
+
+msgid "Button Position"
+msgstr "ボタンの位置"
+
+msgid "Button Size"
+msgstr "ボタンの大きさ"
+
+msgid "Bottom Right"
+msgstr "右下"
+
+msgid "Bottom Left"
+msgstr "左下"
+

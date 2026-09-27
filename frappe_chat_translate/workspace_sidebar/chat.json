@@ -1,0 +1,140 @@
+{
+ "app": "frappe_chat_translate",
+ "creation": "2026-09-27 09:00:00.000000",
+ "docstatus": 0,
+ "doctype": "Workspace Sidebar",
+ "header_icon": "message-circle",
+ "idx": 0,
+ "items": [
+  {
+   "child": 0,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Home",
+   "link_type": "Workspace",
+   "show_arrow": 0,
+   "type": "Link",
+   "link_to": "Chat",
+   "icon": "home"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Open Chat",
+   "link_type": "URL",
+   "show_arrow": 0,
+   "type": "Link",
+   "url": "/desk?chat=1",
+   "icon": "message-circle"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "indent": 1,
+   "keep_closed": 0,
+   "label": "History",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Section Break",
+   "icon": "list"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Channels",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link",
+   "link_to": "ClefinCode Chat Channel"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Messages",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link",
+   "link_to": "ClefinCode Chat Message"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Topics",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link",
+   "link_to": "ClefinCode Chat Topic"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Translations",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link",
+   "link_to": "Chat Message Translation"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "indent": 1,
+   "keep_closed": 0,
+   "label": "Settings",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Section Break",
+   "icon": "settings"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Chat Settings",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link",
+   "link_to": "ClefinCode Chat Settings"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Translation Settings",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link",
+   "link_to": "Chat Translate Settings"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Chat Profiles",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link",
+   "link_to": "ClefinCode Chat Profile"
+  }
+ ],
+ "modified": "2026-09-27 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Chat Translate",
+ "name": "Chat",
+ "owner": "Administrator",
+ "standard": 1,
+ "title": "Chat"
+}

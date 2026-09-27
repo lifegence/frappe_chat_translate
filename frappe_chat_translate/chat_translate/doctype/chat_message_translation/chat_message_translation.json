@@ -1,0 +1,25 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-09-26 18:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["message", "chat_channel", "language", "source_language", "text", "model"],
+ "fields": [
+  {"fieldname": "message", "fieldtype": "Link", "in_list_view": 1, "label": "Message", "options": "ClefinCode Chat Message", "reqd": 1, "search_index": 1},
+  {"fieldname": "chat_channel", "fieldtype": "Link", "label": "Chat Channel", "options": "ClefinCode Chat Channel", "search_index": 1},
+  {"fieldname": "language", "fieldtype": "Data", "in_list_view": 1, "label": "Language", "reqd": 1},
+  {"fieldname": "source_language", "fieldtype": "Data", "label": "Source Language"},
+  {"fieldname": "text", "fieldtype": "Long Text", "label": "Text"},
+  {"fieldname": "model", "fieldtype": "Data", "label": "Model"}
+ ],
+ "modified": "2026-09-26 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Chat Translate",
+ "name": "Chat Message Translation",
+ "owner": "Administrator",
+ "permissions": [{"read": 1, "role": "System Manager", "delete": 1}],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

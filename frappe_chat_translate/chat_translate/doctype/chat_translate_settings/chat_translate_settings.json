@@ -1,0 +1,175 @@
+{
+ "actions": [],
+ "creation": "2026-09-26 18:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "enabled",
+  "provider",
+  "api_key",
+  "model",
+  "effort",
+  "gemini_api_key",
+  "gemini_model",
+  "column_break_1",
+  "languages",
+  "section_glossary",
+  "glossary",
+  "translation_context",
+  "section_button",
+  "button_icon",
+  "button_color",
+  "column_break_button",
+  "button_position",
+  "button_size",
+  "section_notes",
+  "data_note"
+ ],
+ "fields": [
+  {
+   "default": "0",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled"
+  },
+  {
+   "default": "Anthropic Claude",
+   "fieldname": "provider",
+   "fieldtype": "Select",
+   "label": "Translation Engine",
+   "options": "Anthropic Claude\nGoogle Gemini"
+  },
+  {
+   "description": "Leave empty to use the ANTHROPIC_API_KEY environment variable.",
+   "fieldname": "api_key",
+   "fieldtype": "Password",
+   "label": "Claude API Key",
+   "depends_on": "eval:doc.provider==\"Anthropic Claude\""
+  },
+  {
+   "default": "claude-opus-5",
+   "fieldname": "model",
+   "fieldtype": "Data",
+   "label": "Claude Model",
+   "depends_on": "eval:doc.provider==\"Anthropic Claude\""
+  },
+  {
+   "default": "low",
+   "description": "Lower effort answers faster; raise it if translations miss nuance.",
+   "fieldname": "effort",
+   "fieldtype": "Select",
+   "label": "Effort",
+   "options": "low\nmedium\nhigh",
+   "depends_on": "eval:doc.provider==\"Anthropic Claude\""
+  },
+  {
+   "depends_on": "eval:doc.provider==\"Google Gemini\"",
+   "description": "Leave empty to use the GEMINI_API_KEY (or GOOGLE_API_KEY) environment variable.",
+   "fieldname": "gemini_api_key",
+   "fieldtype": "Password",
+   "label": "Gemini API Key"
+  },
+  {
+   "default": "gemini-2.5-flash",
+   "depends_on": "eval:doc.provider==\"Google Gemini\"",
+   "fieldname": "gemini_model",
+   "fieldtype": "Data",
+   "label": "Gemini Model"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Optional. Comma-separated language codes to restrict translation to. Empty = every member receives messages in their own language (taken from the user's language setting).",
+   "fieldname": "languages",
+   "fieldtype": "Data",
+   "label": "Restrict to Languages"
+  },
+  {
+   "fieldname": "section_glossary",
+   "fieldtype": "Section Break",
+   "label": "Glossary"
+  },
+  {
+   "description": "One entry per line. \"term\" keeps the term untranslated; \"term => rendering\" fixes the rendering.",
+   "fieldname": "glossary",
+   "fieldtype": "Small Text",
+   "label": "Glossary"
+  },
+  {
+   "description": "Optional. Who is talking to whom, e.g. \"a Japanese company and a Vietnamese software development team\". Helps the translation choose the right tone and terms.",
+   "fieldname": "translation_context",
+   "fieldtype": "Small Text",
+   "label": "Translation Context"
+  },
+  {
+   "fieldname": "section_button",
+   "fieldtype": "Section Break",
+   "label": "Chat Button"
+  },
+  {
+   "description": "Replaces the ClefinCode logo on the floating chat button. Leave empty to keep the default.",
+   "fieldname": "button_icon",
+   "fieldtype": "Attach Image",
+   "label": "Button Icon"
+  },
+  {
+   "description": "Background colour of the button. Leave empty to keep the default.",
+   "fieldname": "button_color",
+   "fieldtype": "Color",
+   "label": "Button Color"
+  },
+  {
+   "fieldname": "column_break_button",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Bottom Right",
+   "fieldname": "button_position",
+   "fieldtype": "Select",
+   "label": "Button Position",
+   "options": "Bottom Right\nBottom Left"
+  },
+  {
+   "default": "56",
+   "description": "Diameter in pixels (32-96).",
+   "fieldname": "button_size",
+   "fieldtype": "Int",
+   "label": "Button Size"
+  },
+  {
+   "fieldname": "section_notes",
+   "fieldtype": "Section Break",
+   "label": "Data handling"
+  },
+  {
+   "default": "Message text is sent to the translation provider. Use a provider and contract that do not train on your data.",
+   "fieldname": "data_note",
+   "fieldtype": "Small Text",
+   "label": "Note",
+   "read_only": 1
+  }
+ ],
+ "issingle": 1,
+ "modified": "2026-09-27 13:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Chat Translate",
+ "name": "Chat Translate Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

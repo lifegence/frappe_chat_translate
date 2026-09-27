@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+frappe_chat_translate/public/dist/
+node_modules/
+.env
+.env.*
+*.log
+.DS_Store
+.vscode/
+.idea/
