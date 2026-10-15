@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.2 - 2026-10-15
+
+- Installing with bench no longer fails while checking the ClefinCode Chat version: ClefinCode Chat
+  has no `pyproject.toml`, so `bench get-app` stopped with `AttributeError: 'NoneType' object has
+  no attribute 'get'`. The version constraint is removed; the app still requires ClefinCode Chat
+  (`required_apps`).
+
 ## 0.3.1 - 2026-09-27
 
 - OpenAI: an exhausted balance (`insufficient_quota`) is logged as such instead of "rate limited".
