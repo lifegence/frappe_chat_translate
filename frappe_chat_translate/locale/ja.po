@@ -59,3 +59,5 @@ msgstr "右下"
 msgid "Bottom Left"
 msgstr "左下"
 
+msgid "{0} mentioned everyone in {1}"
+msgstr "{0} さんが {1} で全員宛にメンションしました"
