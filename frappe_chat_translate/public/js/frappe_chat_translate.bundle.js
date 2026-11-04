@@ -63,6 +63,15 @@
     if (!timer) timer = setTimeout(flush, 400);
   }
 
+  // an edit replaces the bubble's content, including the translation, and adds the "Edited" label
+  function retranslate(label) {
+    const message = label.closest("[data-message-name]");
+    if (!message) return;
+    const name = message.getAttribute("data-message-name");
+    cache.delete(name);
+    queue(name);
+  }
+
   function scan(root) {
     if (!root.querySelectorAll) return;
     if (root.matches && root.matches("[data-message-name]")) queue(root.getAttribute("data-message-name"));
@@ -113,7 +122,13 @@
     // new messages arrive through ClefinCode's own realtime and are added to the DOM:
     // translate whatever becomes visible
     new MutationObserver((mutations) => {
-      mutations.forEach((m) => m.addedNodes.forEach((node) => node.nodeType === 1 && scan(node)));
+      mutations.forEach((m) =>
+        m.addedNodes.forEach((node) => {
+          if (node.nodeType !== 1) return;
+          if (node.matches(".edited-label")) retranslate(node);
+          scan(node);
+        })
+      );
     }).observe(document.body, { childList: true, subtree: true });
     scan(document.body);
   }
@@ -196,13 +211,142 @@
     open_chat_panel();
   }
 
+  // On a phone the chat window covers the screen and ClefinCode's floating button sits on top of
+  // its "+" button, so hide the button while a room is open. A minimized window is display: none.
+  function hide_bubble_over_open_room() {
+    const style = document.createElement("style");
+    style.id = "ct-mobile-bubble-style";
+    style.textContent = `
+      @media (max-width: 576px) {
+        body:has(.chat-window:not([style*="display: none"])) #chat-bubble { display: none !important; }
+      }`;
+    document.head.appendChild(style);
+  }
+
+  // ClefinCode announces a message before sharing it with the members is committed, so the viewer's
+  // first request for a private attachment can get a 403 and leave a broken image: try again.
+  function retry_failed_attachments() {
+    const delays = [500, 1000, 2000, 4000, 8000];
+    const tries = new WeakMap();
+    document.addEventListener(
+      "error",
+      ({ target: media }) => {
+        if (media.tagName !== "IMG" && media.tagName !== "VIDEO") return;
+        if (!media.closest("[data-message-name]")) return;
+        if (!new URL(media.src, window.location.href).pathname.startsWith("/private/")) return;
+        const tried = tries.get(media) || 0;
+        if (tried >= delays.length) return;
+        tries.set(media, tried + 1);
+        setTimeout(() => {
+          if (media.tagName === "VIDEO") media.load();
+          else media.src = media.getAttribute("src");
+        }, delays[tried]);
+      },
+      true
+    );
+  }
+
+  const is_webview = () => /\/clefinchat\/?$/.test(window.location.pathname);
+
+  // Unread count in the title of the full-page chat tab. ClefinCode marks a message read as soon as
+  // it reaches an open room, even in a background tab, so those are counted here until the tab is
+  // looked at; everything else comes from the server.
+  function show_unread_in_tab() {
+    let unread = 0;
+    let missed = 0;
+    let timer = null;
+
+    const update_title = () => {
+      const total = unread + missed;
+      if (!frappe._original_title) frappe._original_title = document.title;
+      frappe.utils.set_title_prefix(total ? `(${total})` : "");
+    };
+    const refresh = () => {
+      clearTimeout(timer);
+      // give ClefinCode time to mark the room read
+      timer = setTimeout(() => {
+        frappe.call({
+          method: "clefincode_chat.api.api_1_3_4.api.calculate_unread_messages",
+          args: { user: frappe.session.user },
+          callback: (r) => {
+            unread = (r && r.message && r.message.unread_messages) || 0;
+            update_title();
+          },
+        });
+      }, 1500);
+    };
+
+    const on_message = (res) => {
+      if (res.sender_email === frappe.session.user) return;
+      const room = res.room_type === "Contributor" ? res.parent_channel : res.room;
+      const settings = frappe.ErpnextChat && frappe.ErpnextChat.settings;
+      const open_rooms = (settings && settings.open_chat_space_rooms) || [];
+      if (document.hidden && open_rooms.includes(room)) {
+        missed += 1;
+        update_title();
+      }
+      refresh();
+    };
+    // frappe.realtime.on does nothing until the desk has created the socket
+    const listen = () => {
+      if (frappe.realtime.socket) frappe.realtime.on("new_chat_notification", on_message);
+      else setTimeout(listen, 200);
+    };
+    listen();
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) return;
+      missed = 0;
+      update_title();
+      refresh();
+    });
+    document.addEventListener("click", (event) => {
+      if (event.target.closest && event.target.closest(".chat-room")) refresh();
+    });
+    refresh();
+  }
+
+  // Keep the open room in the URL of the full-page chat, so a reload reopens it.
+  function keep_open_room_in_url() {
+    const set_room = (room) => {
+      const url = new URL(window.location.href);
+      if (room) url.searchParams.set("room", room);
+      else url.searchParams.delete("room");
+      history.replaceState(history.state, "", url);
+    };
+    document.addEventListener(
+      "click",
+      (event) => {
+        if (!event.target.closest) return;
+        const chat_room = event.target.closest(".chat-room[data-room]");
+        if (chat_room) set_room(chat_room.getAttribute("data-room"));
+        else if (event.target.closest(".close-chat-window")) set_room(null);
+      },
+      true
+    );
+
+    const room = new URLSearchParams(window.location.search).get("room");
+    if (!room) return;
+    let tries = 0;
+    const timer = setInterval(() => {
+      const chat_room = document.querySelector(`.chat-room[data-room="${CSS.escape(room)}"]`);
+      if (chat_room) chat_room.click();
+      if (chat_room || ++tries > 30) clearInterval(timer);
+    }, 500);
+  }
+
   function init() {
     patch_shortcut_widget();
     intercept_chat_links();
     open_chat_from_url();
+    if (is_webview()) {
+      show_unread_in_tab();
+      keep_open_room_in_url();
+    }
     frappe.call({ method: METHOD + "get_client_settings", callback: (r) => start(r && r.message) });
   }
 
+  hide_bubble_over_open_room();
+  retry_failed_attachments();
   patch_shortcut_widget();
   const run = () => whenReady(init);
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", run);

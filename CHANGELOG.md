@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.3 - 2026-11-04
+
+- Phones: the floating chat button no longer sits on top of an open chat window (it covered the "+"
+  button).
+- A private attachment that fails because the message was not yet shared with the viewer is loaded
+  again, instead of staying a broken image until the page is reloaded.
+- Full-page chat: the browser tab shows the unread count, and a reload reopens the room.
+- An edited message is translated again right away.
+
 ## 0.3.2 - 2026-10-15
 
 - Installing with bench no longer fails while checking the ClefinCode Chat version: ClefinCode Chat
