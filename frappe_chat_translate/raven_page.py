@@ -9,9 +9,7 @@ import frappe
 
 from frappe_chat_translate import __version__
 
-SCRIPT = (
-    '<script src="/assets/frappe_chat_translate/js/raven_translate.js?v={v}" defer></script>'
-)
+SCRIPT = '<script src="/assets/frappe_chat_translate/js/raven_translate.js?v={v}" defer></script>'
 
 
 def is_raven_page(path: str) -> bool:

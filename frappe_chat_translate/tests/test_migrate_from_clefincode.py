@@ -52,7 +52,9 @@ class TestMigrateFromClefinCode(IntegrationTestCase):
         return path
 
     def stale_row(self, old, lang="ja"):
-        doc = frappe.get_doc(doctype=DT, message=old, language=lang, source_language="en", text=f"{old}-{lang}")
+        doc = frappe.get_doc(
+            doctype=DT, message=old, language=lang, source_language="en", text=f"{old}-{lang}"
+        )
         doc.db_insert()
 
     def test_rows_are_repointed_or_removed(self):
@@ -79,7 +81,9 @@ class TestMigrateFromClefinCode(IntegrationTestCase):
             }
         )
         self.assertEqual(mig.run(path)["added"], 1)
-        self.assertEqual(frappe.db.get_value(DT, {"message": self.text, "language": "vi"}, "text"), "Xin chào")
+        self.assertEqual(
+            frappe.db.get_value(DT, {"message": self.text, "language": "vi"}, "text"), "Xin chào"
+        )
 
     def test_no_map_file_changes_nothing(self):
         self.stale_row("cc-text")
@@ -89,9 +93,7 @@ class TestMigrateFromClefinCode(IntegrationTestCase):
     def test_duplicates_keep_the_newest(self):
         frappe.db.sql_ddl(f"alter table `tab{DT}` drop index if exists unique_message_language")
         self.addCleanup(lambda: frappe.db.delete(DT))
-        self.addCleanup(
-            lambda: frappe.db.add_unique(DT, ["message", "language"], "unique_message_language")
-        )
+        self.addCleanup(lambda: frappe.db.add_unique(DT, ["message", "language"], "unique_message_language"))
         for i, when in enumerate(("2026-11-01 10:00:00", "2026-11-02 10:00:00")):
             doc = frappe.get_doc(doctype=DT, message=self.text, language="ja", text=f"v{i}", creation=when)
             doc.db_insert()

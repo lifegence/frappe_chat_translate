@@ -79,7 +79,9 @@ def run(path: str | None = None) -> dict:
     for row in stale:
         new = target(m, row.message)
         if new and frappe.db.exists("Raven Message", new):
-            frappe.db.set_value(DT, row.name, {"message": new, "chat_channel": channel(new)}, update_modified=False)
+            frappe.db.set_value(
+                DT, row.name, {"message": new, "chat_channel": channel(new)}, update_modified=False
+            )
             stats["repointed"] += 1
         else:
             frappe.db.delete(DT, {"name": row.name})
