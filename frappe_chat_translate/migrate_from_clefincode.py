@@ -9,7 +9,9 @@ goes to the caption when there is one.
 - Rows still pointing at ClefinCode messages are re-pointed (or removed when the message was not
   converted, e.g. a deleted message).
 - When the table is empty (the old app was uninstalled), the translations saved in the map are added.
-Runs from the v0.4 patch; can also be run again by hand:
+Without the map file nothing is changed: the chat may not be converted yet (the bench can already run
+0.4.0 while ClefinCode Chat is still installed), and the conversion calls this again when it is done.
+Runs from the v0.4 patch and from the conversion; can also be run again by hand:
     bench --site SITE execute frappe_chat_translate.migrate_from_clefincode.run
 """
 
@@ -37,7 +39,9 @@ def target(m: dict, old: str) -> str | None:
 def run(path: str | None = None) -> dict:
     if not frappe.db.table_exists("Raven Message"):
         return {"skipped": "Raven is not installed"}
-    m = load_map(path) or {}
+    m = load_map(path)
+    if m is None:
+        return {"skipped": "no map file (chat not converted yet)"}
     stats = {"repointed": 0, "removed": 0, "added": 0}
     channel_of = {}
 

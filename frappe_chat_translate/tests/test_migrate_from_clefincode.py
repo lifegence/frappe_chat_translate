@@ -81,6 +81,7 @@ class TestMigrateFromClefinCode(IntegrationTestCase):
         self.assertEqual(mig.run(path)["added"], 1)
         self.assertEqual(frappe.db.get_value(DT, {"message": self.text, "language": "vi"}, "text"), "Xin chào")
 
-    def test_no_map_file_removes_rows_it_cannot_place(self):
+    def test_no_map_file_changes_nothing(self):
         self.stale_row("cc-text")
-        self.assertEqual(mig.run("/nonexistent.json")["removed"], 1)
+        self.assertIn("skipped", mig.run("/nonexistent.json"))
+        self.assertTrue(frappe.db.exists(DT, {"message": "cc-text"}))
