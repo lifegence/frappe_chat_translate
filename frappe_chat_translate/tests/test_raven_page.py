@@ -1,7 +1,5 @@
 """The translation script is added to Raven's page only."""
 
-from unittest.mock import patch
-
 import frappe
 from werkzeug.wrappers import Request, Response
 
@@ -43,5 +41,8 @@ class TestRavenPage(IntegrationTestCase):
         self.assertEqual(run("/raven", status=404), PAGE)
 
     def test_guest_untouched(self):
-        with patch.object(frappe.session, "user", "Guest"):
+        frappe.set_user("Guest")
+        try:
             self.assertEqual(run("/raven"), PAGE)
+        finally:
+            frappe.set_user("Administrator")
