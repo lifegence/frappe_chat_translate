@@ -389,6 +389,11 @@ def _store(message: str, channel: str, lang: str, source: str | None, text: str 
         pass  # another viewer stored it between the check and the insert
 
 
+def worth_showing(translation: str | None, row) -> bool:
+    """A translation identical to the original (a bare URL, a code, a name) would only repeat it."""
+    return bool(translation) and translation.strip() != plain_text(row.text)
+
+
 def translate_for_user(names: list[str], user: str) -> dict[str, str]:
     """Translations of the given messages into the user's language, using and filling the cache."""
     settings = get_settings()
@@ -412,7 +417,7 @@ def translate_for_user(names: list[str], user: str) -> dict[str, str]:
     todo = []
     for name, (row, channel) in docs.items():
         if name in cached:
-            if cached[name]:
+            if worth_showing(cached[name], row):
                 result[name] = cached[name]
         elif is_translatable(row):
             todo.append(name)
@@ -431,7 +436,7 @@ def translate_for_user(names: list[str], user: str) -> dict[str, str]:
             source = (row.get("source_language") or "").split("-")[0].lower() or None
             text = None if source == lang else row.get("text")
             _store(name, docs[name][1], lang, source, text, model_name(settings))
-            if text:
+            if worth_showing(text, docs[name][0]):
                 result[name] = text
     return result
 

@@ -153,6 +153,12 @@ class TestTranslation(IntegrationTestCase):
         frappe.delete_doc("Raven Message", name, ignore_permissions=True, force=True)
         self.assertFalse(frappe.db.exists("Chat Message Translation", {"message": name}))
 
+    @patch("frappe_chat_translate.translation.call_llm", side_effect=fake_engine)
+    def test_translation_equal_to_original_is_not_shown(self, engine):
+        name = self.send("<p>https://example.com/x</p>")
+        t._store(name, self.channel, "vi", "en", "https://example.com/x", "m")
+        self.assertEqual(get(VI_USER, name), {})
+
     def test_store_twice_keeps_one(self):
         name = self.send("<p>Once.</p>")
         t._store(name, self.channel, "vi", "en", "[vi] Once.", "m")
