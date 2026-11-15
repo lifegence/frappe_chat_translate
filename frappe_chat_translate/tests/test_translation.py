@@ -153,6 +153,13 @@ class TestTranslation(IntegrationTestCase):
         frappe.delete_doc("Raven Message", name, ignore_permissions=True, force=True)
         self.assertFalse(frappe.db.exists("Chat Message Translation", {"message": name}))
 
+    def test_store_twice_keeps_one(self):
+        name = self.send("<p>Once.</p>")
+        t._store(name, self.channel, "vi", "en", "[vi] Once.", "m")
+        with patch.object(frappe.db, "exists", return_value=False):  # the race: both checked first
+            t._store(name, self.channel, "vi", "en", "[vi] Once.", "m")
+        self.assertEqual(frappe.db.count("Chat Message Translation", {"message": name, "language": "vi"}), 1)
+
     def test_files_polls_and_bots_are_skipped(self):
         doc = frappe._dict(message_type="File", is_bot_message=0, text="x")
         self.assertFalse(t.is_translatable(doc))

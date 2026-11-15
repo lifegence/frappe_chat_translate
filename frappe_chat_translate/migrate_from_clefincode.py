@@ -36,6 +36,21 @@ def target(m: dict, old: str) -> str | None:
     return (m.get("captions") or {}).get(old) or (m.get("messages") or {}).get(old)
 
 
+def remove_duplicates() -> int:
+    """Keep the newest row per (message, language); 0.3.x could store a translation twice."""
+    if not frappe.db.table_exists(DT):
+        return 0
+    dupes = frappe.db.sql(
+        f"""select name from `tab{DT}` t where exists (
+            select 1 from `tab{DT}` n where n.message = t.message and n.language = t.language
+            and (n.creation > t.creation or (n.creation = t.creation and n.name > t.name)))""",
+        pluck=True,
+    )
+    for i in range(0, len(dupes), 500):
+        frappe.db.delete(DT, {"name": ["in", dupes[i : i + 500]]})
+    return len(dupes)
+
+
 def run(path: str | None = None) -> dict:
     if not frappe.db.table_exists("Raven Message"):
         return {"skipped": "Raven is not installed"}
@@ -69,6 +84,8 @@ def run(path: str | None = None) -> dict:
         else:
             frappe.db.delete(DT, {"name": row.name})
             stats["removed"] += 1
+
+    stats["duplicates"] = remove_duplicates()
 
     if not frappe.db.count(DT):
         for tr in m.get("translations") or []:

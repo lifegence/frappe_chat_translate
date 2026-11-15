@@ -62,7 +62,7 @@ class TestMigrateFromClefinCode(IntegrationTestCase):
         path = self.map_file(
             {"messages": {"cc-text": self.text, "cc-image": "img"}, "captions": {"cc-image": self.caption}}
         )
-        self.assertEqual(mig.run(path), {"repointed": 2, "removed": 1, "added": 0})
+        self.assertEqual(mig.run(path), {"repointed": 2, "removed": 1, "duplicates": 0, "added": 0})
         self.assertEqual(frappe.db.get_value(DT, {"text": "cc-text-ja"}, "message"), self.text)
         self.assertEqual(frappe.db.get_value(DT, {"text": "cc-image-ja"}, "message"), self.caption)
         self.assertEqual(frappe.db.get_value(DT, {"message": self.text}, "chat_channel"), self.channel)
@@ -85,3 +85,15 @@ class TestMigrateFromClefinCode(IntegrationTestCase):
         self.stale_row("cc-text")
         self.assertIn("skipped", mig.run("/nonexistent.json"))
         self.assertTrue(frappe.db.exists(DT, {"message": "cc-text"}))
+
+    def test_duplicates_keep_the_newest(self):
+        frappe.db.sql_ddl(f"alter table `tab{DT}` drop index if exists unique_message_language")
+        self.addCleanup(lambda: frappe.db.delete(DT))
+        self.addCleanup(
+            lambda: frappe.db.add_unique(DT, ["message", "language"], "unique_message_language")
+        )
+        for i, when in enumerate(("2026-11-01 10:00:00", "2026-11-02 10:00:00")):
+            doc = frappe.get_doc(doctype=DT, message=self.text, language="ja", text=f"v{i}", creation=when)
+            doc.db_insert()
+        self.assertEqual(mig.remove_duplicates(), 1)
+        self.assertEqual(frappe.db.get_value(DT, {"message": self.text}, "text"), "v1")

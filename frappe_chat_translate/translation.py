@@ -375,15 +375,18 @@ def _cached(names: list[str], lang: str) -> dict[str, str | None]:
 def _store(message: str, channel: str, lang: str, source: str | None, text: str | None, model: str | None):
     if frappe.db.exists("Chat Message Translation", {"message": message, "language": lang}):
         return  # another viewer cached it meanwhile
-    frappe.get_doc(
-        doctype="Chat Message Translation",
-        message=message,
-        chat_channel=channel,
-        language=lang,
-        source_language=source,
-        text=text,
-        model=model,
-    ).insert(ignore_permissions=True)
+    try:
+        frappe.get_doc(
+            doctype="Chat Message Translation",
+            message=message,
+            chat_channel=channel,
+            language=lang,
+            source_language=source,
+            text=text,
+            model=model,
+        ).insert(ignore_permissions=True)
+    except (frappe.DuplicateEntryError, frappe.UniqueValidationError):
+        pass  # another viewer stored it between the check and the insert
 
 
 def translate_for_user(names: list[str], user: str) -> dict[str, str]:

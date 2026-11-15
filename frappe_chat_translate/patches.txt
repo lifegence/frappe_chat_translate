@@ -1,4 +1,5 @@
 [pre_model_sync]
+frappe_chat_translate.patches.v0_4.remove_duplicate_translations
 
 [post_model_sync]
 frappe_chat_translate.patches.v0_4.switch_to_raven
