@@ -1,17 +1,12 @@
 # Frappe Chat Translate
 
-An add-on for [ClefinCode Chat](https://github.com/clefincode/clefincode_chat) on Frappe v15 and v16:
+Real-time translation for [Raven](https://github.com/The-Commit-Company/raven), the chat app for
+Frappe v16: every participant reads every message in their own language, whatever language it was
+written in. Translations are made when a message is displayed and cached per message and language.
 
-- **Real-time translation** - every participant reads every message in their own language, whatever
-  language it was written in. Translations are made when a message is displayed and cached per
-  message and language.
-- **Access control hardening** - checks that the logged-in user is a member of the channel before
-  ClefinCode Chat's API returns or changes its data.
-- **Chat workspace** - an apps-screen icon and a workspace with chat history and settings, for
-  administrators.
-- **Chat button appearance** - replace the icon, colour, size and position of the floating chat button.
+It does not modify Raven itself. This project is not affiliated with The Commit Company.
 
-It does not modify ClefinCode Chat itself. This project is not affiliated with ClefinCode.
+Up to 0.3.x this app worked with ClefinCode Chat (see [Moving from ClefinCode Chat](#moving-from-clefincode-chat)).
 
 [日本語の README](README_ja.md)
 
@@ -19,49 +14,51 @@ It does not modify ClefinCode Chat itself. This project is not affiliated with C
 
 | | Tested with |
 |---|---|
-| Frappe | v16 (16.33.1, 16.34.2), v15 (15.121.0) |
-| ClefinCode Chat | 1.3.913 |
-| Python | 3.10 or later (tested with 3.11 on v15, 3.14 on v16) |
-| Translation engine | Anthropic Claude, Google Gemini, or OpenAI / an OpenAI-compatible service (API key required) |
+| Frappe | v16 (16.55.2) |
+| Raven | 3.2.0 |
+| Python | 3.10 or later (tested with 3.14) |
+| Translation engine | Anthropic Claude, Google Gemini, or OpenAI / an OpenAI-compatible service such as the LiteLLM gateway (API key required) |
 
 ## Installation
 
 ```bash
 bench get-app https://github.com/lifegence/frappe_chat_translate
 bench --site your-site install-app frappe_chat_translate
-bench build --app frappe_chat_translate
 bench restart
 ```
 
 ## Configuration
 
-Open **Chat > Settings > Translation Settings** (DocType `Chat Translate Settings`, System Manager only).
+Open the **Chat Translate** workspace > **Translation Settings** (DocType `Chat Translate Settings`,
+System Manager only).
 
 | Setting | Notes |
 |---|---|
 | Enabled | Turns translation on for everyone |
 | Translation Engine | `Anthropic Claude` (default model `claude-opus-5`), `Google Gemini` (default model `gemini-2.5-flash`) or `OpenAI` (default model `gpt-6-sol`) |
 | API keys | Stored encrypted. Leave empty to use `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` / `GOOGLE_API_KEY`, or `OPENAI_API_KEY` |
-| Base URL (OpenAI) | Optional. An OpenAI-compatible Chat Completions endpoint, e.g. Azure OpenAI or a self-hosted server; the model field then takes that service's model or deployment name |
+| Base URL (OpenAI) | Optional. An OpenAI-compatible Chat Completions endpoint, e.g. a LiteLLM gateway (`https://gateway.example.com/v1`), Azure OpenAI or a self-hosted server; the model field then takes that service's model name |
 | Effort | Claude, and OpenAI without a Base URL. Raise it if translations miss nuance |
 | Restrict to Languages | Optional. Empty = every user's language is served |
 | Translation Context | Optional. Who is talking to whom; helps with tone and terms |
 | Glossary | One entry per line. `term` keeps it untranslated, `term => rendering` fixes the rendering |
-| Chat Button | Icon, colour, position and size of the floating chat button |
 
 Each user's language is their **Language** in the user settings.
 
 ### How translation works
 
-1. When chat messages appear on screen (history or new ones), the browser asks for translations of
-   the visible messages into the viewer's language.
+1. Raven's web app (`/raven`) gets a small script from this app (added to the page's HTML; Raven's
+   files are not changed). When messages appear on screen (history or new ones), it asks for
+   translations of the visible messages into the viewer's language.
 2. Cached translations are returned at once. The rest are translated in one request (up to 50
    messages) and cached per (message, language), so the next viewer with the same language pays
    nothing.
-3. Messages already in the viewer's language are not translated. An edited message is translated
-   again the next time it is shown.
+3. The translation is shown under the message. Messages already in the viewer's language, and
+   translations identical to the original (a bare URL, a code), are not shown. An edited message is
+   translated again; a deleted message's translations are removed.
 
-A translation is only returned for messages in channels the viewer belongs to.
+A translation is only returned for messages in channels the viewer can read in Raven (Raven's own
+permission rule). Files, images, polls, system and bot messages are not translated.
 
 ### Data handling
 
@@ -71,49 +68,29 @@ encrypted in the site database.
 
 Nothing is sent to Lifegence. See [PRIVACY.md](PRIVACY.md) for details.
 
-## Access control hardening
+## Moving from ClefinCode Chat
 
-In ClefinCode Chat 1.3.913, many whitelisted API methods take the acting user and the channel from
-request parameters without checking them against the logged-in user. As a result, a logged-in user
-(including a Website User) could read channels and messages they are not a member of.
+0.4.0 translates Raven instead of ClefinCode Chat. The translation settings (engine, keys, glossary)
+stay as they are. Cached translations follow the messages when the chat is converted to Raven:
 
-This app wraps every whitelisted method of `clefincode_chat.api.*` (via `override_whitelisted_methods`)
-and checks, after authentication:
+1. Convert the ClefinCode Chat data to Raven with a script that writes the message map
+   `private/files/clefincode_raven_map.json` (`{"messages": {old: new}, "captions": {old: new}}`).
+2. Run `bench --site your-site execute frappe_chat_translate.migrate_from_clefincode.run`
+   (the conversion can also call it). Translations of converted messages are re-pointed; those of
+   messages that were not converted are removed. Without the map file nothing is changed.
+3. Uninstall ClefinCode Chat. Do not uninstall this app: that would remove the translations and
+   settings.
 
-- channel, topic and message parameters belong to a channel the logged-in user is a member or
-  contributor of;
-- parameters naming the acting user are the logged-in user (except for methods where they
-  legitimately name someone else);
-- guests may only call harmless methods unless portal support is enabled.
-
-Administrator is not checked. To diagnose a false positive, set `"chat_guard_mode": "log"` in
-`site_config.json`: violations are logged instead of refused (`logs/frappe_chat_translate.guard.log`).
-
-The ClefinCode maintainers have been informed. To report a security issue in this app, see
-[SECURITY.md](SECURITY.md).
-
-## Chat workspace
-
-The apps screen gets a **Chat** icon (System Manager and Chat Administrator only) that opens a
-workspace with:
-
-- **Open Chat** - opens the chat panel on the current page
-- **History** - channels, messages, topics and cached translations (all users' conversations)
-- **Settings** - ClefinCode Chat settings, translation settings, chat profiles
-
-Other users keep using the floating chat button.
+Version 0.3.x (the ClefinCode Chat add-on, including its access-control hardening) stays available
+under the `v0.3.3` tag.
 
 ## Known limitations
 
+- Raven's mobile apps (iOS / Android) do not show translations; only the web app at `/raven` does.
 - Push and e-mail notifications show the original text.
-- If a message is edited while another user has it open, that user sees the old translation until
-  the page is reloaded.
-- The portal chat for Website Users has been tested through the API, not in the browser.
-- On Frappe v15, ClefinCode Chat shows a chat icon in the navbar instead of the floating button in
-  the desk. The icon image setting applies to it; colour, position and size do not.
+- Raven's own AI features are not used. If both are enabled, they work independently.
 - OpenAI-compatible services: the request uses structured output (JSON schema) and, if the service
-  rejects it, is retried once in JSON mode. Tested live with the OpenAI API and Google's
-  OpenAI-compatible endpoint; Azure OpenAI and self-hosted servers with a mocked client only.
+  rejects it, is retried once in JSON mode.
 
 ## Development
 
@@ -122,9 +99,9 @@ bench --site your-test-site run-tests --app frappe_chat_translate
 ```
 
 The tests replace the translation engine with a stand-in, so they need no API key. They create test
-users and chat groups: run them on a test site only.
+users and Raven channels: run them on a test site only.
 
-Demo data (two test users and a trilingual group conversation, for local sites only):
+Demo data (two test users and a trilingual Raven channel, for local sites only):
 
 ```bash
 bench --site your-test-site execute frappe_chat_translate.demo.seed_demo.seed --kwargs "{'owner': 'you@example.com'}"
@@ -132,6 +109,6 @@ bench --site your-test-site execute frappe_chat_translate.demo.seed_demo.seed --
 
 ## License
 
-GPL-3.0-or-later, the same as ClefinCode Chat. See [LICENSE](LICENSE).
+GPL-3.0-or-later. See [LICENSE](LICENSE).
 
 Copyright (c) 2026 Lifegence Corporation

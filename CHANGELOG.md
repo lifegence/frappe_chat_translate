@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.4.0 - 2026-11-15
+
+Translates [Raven](https://github.com/The-Commit-Company/raven) instead of ClefinCode Chat.
+
+- Raven's web app (`/raven`) gets the translation script, added to the page's HTML by an
+  `after_request` hook; Raven itself is not modified. The translation is shown under each message,
+  on desktop and phone layouts.
+- Only messages in channels the viewer can read in Raven are translated (Raven's permission rule).
+  Files, images, polls, system and bot messages are skipped.
+- A translation identical to the original (a bare URL, a code) is not shown.
+- Edited messages are translated again; deleted messages lose their cached translations.
+- One cached translation per message and language: 0.3.x could store a translation twice when two
+  viewers opened a message at the same moment. Duplicates are removed on upgrade and a unique index
+  prevents new ones.
+- Moving from ClefinCode Chat: the settings stay; cached translations follow the messages using the
+  conversion's map file (`frappe_chat_translate.migrate_from_clefincode.run`, also run by the
+  upgrade patch when the file exists).
+- Removed with ClefinCode Chat: the access-control hardening, the floating chat button and its
+  settings, and the Chat workspace and icon (replaced by a Chat Translate workspace).
+- Requires Frappe v16 and Raven. `google-genai` may now be 1.x or 2.x.
+
 ## 0.3.3 - 2026-11-04
 
 - Phones: the floating chat button no longer sits on top of an open chat window (it covered the "+"
