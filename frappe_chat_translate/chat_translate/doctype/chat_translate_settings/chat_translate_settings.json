@@ -19,12 +19,6 @@
   "section_glossary",
   "glossary",
   "translation_context",
-  "section_button",
-  "button_icon",
-  "button_color",
-  "column_break_button",
-  "button_position",
-  "button_size",
   "section_notes",
   "data_note"
  ],
@@ -99,7 +93,7 @@
    "fieldtype": "Data",
    "label": "Base URL",
    "depends_on": "eval:doc.provider==\"OpenAI\"",
-   "description": "Optional. An OpenAI-compatible Chat Completions endpoint (e.g. Azure OpenAI, a self-hosted server). Empty = OpenAI."
+   "description": "Optional. An OpenAI-compatible Chat Completions endpoint (e.g. the LiteLLM AI Gateway, Azure OpenAI, a self-hosted server). Empty = OpenAI."
   },
   {
    "fieldname": "column_break_1",
@@ -129,41 +123,6 @@
    "label": "Translation Context"
   },
   {
-   "fieldname": "section_button",
-   "fieldtype": "Section Break",
-   "label": "Chat Button"
-  },
-  {
-   "description": "Replaces the ClefinCode logo on the floating chat button. Leave empty to keep the default.",
-   "fieldname": "button_icon",
-   "fieldtype": "Attach Image",
-   "label": "Button Icon"
-  },
-  {
-   "description": "Background colour of the button. Leave empty to keep the default.",
-   "fieldname": "button_color",
-   "fieldtype": "Color",
-   "label": "Button Color"
-  },
-  {
-   "fieldname": "column_break_button",
-   "fieldtype": "Column Break"
-  },
-  {
-   "default": "Bottom Right",
-   "fieldname": "button_position",
-   "fieldtype": "Select",
-   "label": "Button Position",
-   "options": "Bottom Right\nBottom Left"
-  },
-  {
-   "default": "56",
-   "description": "Diameter in pixels (32-96).",
-   "fieldname": "button_size",
-   "fieldtype": "Int",
-   "label": "Button Size"
-  },
-  {
    "fieldname": "section_notes",
    "fieldtype": "Section Break",
    "label": "Data handling"
@@ -177,7 +136,7 @@
   }
  ],
  "issingle": 1,
- "modified": "2026-09-27 13:00:00.000000",
+ "modified": "2026-11-15 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Chat Translate",
  "name": "Chat Translate Settings",

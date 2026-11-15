@@ -9,5 +9,5 @@ We will acknowledge the report within 5 business days and agree on a disclosure 
 
 ## Scope
 
-This policy covers this app (`frappe_chat_translate`). Issues in ClefinCode Chat itself should be
-reported to the ClefinCode maintainers; if they also affect this app's access checks, please tell us too.
+This policy covers this app (`frappe_chat_translate`). Issues in Raven itself should be reported to
+the Raven maintainers (The Commit Company); if they also affect this app, please tell us too.
