@@ -8,7 +8,20 @@ OLD_CHAT_RECORDS = (("Desktop Icon", "Chat"), ("Workspace Sidebar", "Chat"), ("W
 
 def after_install():
     remove_old_chat_records()
+    ensure_unique_translations()
     frappe.clear_cache()
+
+
+def ensure_unique_translations():
+    """The unique (message, language) index, also on sites whose DocType was already up to date
+    (on_doctype_update runs only when the DocType changes)."""
+    from frappe_chat_translate.chat_translate.doctype.chat_message_translation.chat_message_translation import (
+        on_doctype_update,
+    )
+    from frappe_chat_translate.migrate_from_clefincode import remove_duplicates
+
+    remove_duplicates()
+    on_doctype_update()
 
 
 def remove_old_chat_records():
