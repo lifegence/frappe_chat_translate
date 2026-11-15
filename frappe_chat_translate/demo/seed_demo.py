@@ -1,4 +1,4 @@
-"""Demo data for checking translations: two test users and a trilingual group conversation.
+"""Demo data for checking translations: two test users and a trilingual Raven channel.
 
     bench --site SITE execute frappe_chat_translate.demo.seed_demo.seed --kwargs "{'owner': 'you@example.com'}"
 
@@ -7,7 +7,6 @@ Re-running removes the previous demo group and posts the conversation again.
 Returns the test users' passwords (random, generated per run): demo users are for local sites only.
 """
 
-import json
 import secrets
 
 import frappe
@@ -47,6 +46,9 @@ CONVERSATION = [
 ]
 
 
+WORKSPACE = "Chat Translate Demo"
+
+
 def _ensure_user(email, first, last, lang):
     if not frappe.db.exists("User", email):
         frappe.get_doc(
@@ -57,42 +59,60 @@ def _ensure_user(email, first, last, lang):
             user_type="System User",
             send_welcome_email=0,
             language=lang,
-            roles=[{"role": "Projects User"}],
+            roles=[{"role": "Raven User"}],
         ).insert(ignore_permissions=True)
     else:
         frappe.db.set_value("User", email, "language", lang)
+        frappe.get_doc("User", email).add_roles("Raven User")
     password = secrets.token_urlsafe(12)
     update_password(email, password)
     return password
 
 
-def _remove_old_groups():
-    for name in frappe.get_all("ClefinCode Chat Channel", filters={"channel_name": GROUP}, pluck="name"):
-        frappe.db.delete("Chat Message Translation", {"chat_channel": name})
-        frappe.db.delete("ClefinCode Chat Message", {"chat_channel": name})
-        frappe.delete_doc("ClefinCode Chat Channel", name, force=True, ignore_permissions=True)
+def _ensure_workspace(members):
+    if not frappe.db.exists("Raven Workspace", WORKSPACE):
+        frappe.get_doc(doctype="Raven Workspace", workspace_name=WORKSPACE, type="Public").insert(
+            ignore_permissions=True
+        )
+    for i, email in enumerate(members):
+        if not frappe.db.exists("Raven Workspace Member", {"workspace": WORKSPACE, "user": email}):
+            frappe.get_doc(
+                doctype="Raven Workspace Member", workspace=WORKSPACE, user=email, is_admin=int(i == 0)
+            ).insert(ignore_permissions=True)
+
+
+def _remove_old_channel():
+    for name in frappe.get_all("Raven Channel", filters={"workspace": WORKSPACE}, pluck="name"):
+        for msg in frappe.get_all("Raven Message", filters={"channel_id": name}, pluck="name"):
+            frappe.db.delete("Chat Message Translation", {"message": msg})
+        frappe.delete_doc("Raven Channel", name, force=True, ignore_permissions=True)
 
 
 def seed(owner: str):
-    from clefincode_chat.api.api_1_3_4 import api as capi
-
     if not frappe.db.exists("User", owner):
         frappe.throw(f"User {owner} not found")
     passwords = {email: _ensure_user(email, first, last, lang) for email, first, last, lang in USERS}
-    _remove_old_groups()
+    frappe.get_doc("User", owner).add_roles("Raven User")
+    members = [owner] + [email for email, *_ in USERS]
+    _ensure_workspace(members)
+    _remove_old_channel()
 
     # Run from the command line only (bench execute, not whitelisted): each demo message is sent as its
-    # author through ClefinCode's API, which takes the sender from the session.
+    # author, so Raven records the right sender.
     frappe.set_user(owner)  # nosemgrep
-    members = [{"email": email, "platform": "Chat"} for email, *_ in USERS]
-    room = capi.create_group(json.dumps(members), owner)["results"][0]["room"]
-    frappe.db.set_value("ClefinCode Chat Channel", room, "channel_name", GROUP)
+    channel = frappe.get_doc(
+        doctype="Raven Channel", channel_name=GROUP, type="Private", workspace=WORKSPACE
+    ).insert()
+    channel.add_members([email for email, *_ in USERS])
 
     for sender, text in CONVERSATION:
-        email = owner if sender == "owner" else sender
-        frappe.set_user(email)  # nosemgrep
-        name = frappe.db.get_value("User", email, "full_name")
-        capi.send(f"<p>{frappe.utils.escape_html(text)}</p>", name, room, email)
+        frappe.set_user(owner if sender == "owner" else sender)  # nosemgrep
+        frappe.get_doc(
+            doctype="Raven Message",
+            channel_id=channel.name,
+            message_type="Text",
+            text=f"<p>{frappe.utils.escape_html(text)}</p>",
+        ).insert()
     frappe.set_user("Administrator")  # nosemgrep
     frappe.db.commit()
-    return {"group": room, "messages": len(CONVERSATION), "passwords": passwords}
+    return {"channel": channel.name, "messages": len(CONVERSATION), "passwords": passwords}

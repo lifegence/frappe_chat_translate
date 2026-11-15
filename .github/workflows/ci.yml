@@ -22,9 +22,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - frappe: version-15
-            python: "3.11"
-            node: 20
           - frappe: version-16
             python: "3.14"
             node: 24
@@ -82,14 +79,11 @@ jobs:
       - name: Install
         working-directory: /home/runner/frappe-bench
         run: |
-          # ClefinCode Chat's develop branch carries a node_modules symlink to an absolute path;
-          # develop-marketplace (the same version) does not
-          bench get-app --skip-assets --branch develop-marketplace https://github.com/clefincode/clefincode_chat
+          bench get-app --skip-assets --branch v3.2.0 https://github.com/The-Commit-Company/raven
           bench get-app --skip-assets frappe_chat_translate $GITHUB_WORKSPACE
           bench setup requirements --dev
           bench new-site --db-root-password root --admin-password admin test_site
-          bench --site test_site install-app clefincode_chat frappe_chat_translate
-          bench build --app frappe_chat_translate
+          bench --site test_site install-app raven frappe_chat_translate
         env:
           CI: "Yes"
 

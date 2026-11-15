@@ -1,10 +1,10 @@
-"""Translate ClefinCode Chat messages into the viewer's language when they are displayed.
+"""Translate Raven messages into the viewer's language when they are displayed.
 
-Flow: the chat screen shows messages (history or new ones arriving over ClefinCode's own
-realtime) -> the browser asks for translations of the visible messages -> cached ones are
-returned at once, the rest are translated in one Claude request and cached per
-(message, language) -> shown under each bubble. Every participant therefore reads every
-message in their own language, whatever language it was written in.
+Flow: Raven shows messages (history or new ones arriving over its realtime) -> the script added
+to Raven's page asks for translations of the visible messages -> cached ones are returned at once,
+the rest are translated in one request to the configured engine and cached per (message, language)
+-> shown under each message. Every participant therefore reads every message in their own
+language, whatever language it was written in.
 """
 
 import json
@@ -12,8 +12,6 @@ import re
 from html import unescape
 
 import frappe
-
-from frappe_chat_translate.security.guard import can_access_channel
 
 MAX_BATCH = 50  # messages translated per request
 LANGUAGE_NAMES = {"ja": "Japanese", "vi": "Vietnamese", "en": "English"}
@@ -39,18 +37,24 @@ def user_language(user: str) -> str | None:
 
 
 def plain_text(content: str) -> str:
-    """ClefinCode stores rich text (HTML from the editor); translate the visible text only."""
+    """Raven stores rich text (HTML from its editor); translate the visible text only."""
     text = re.sub(r"<br\s*/?>|</p>|</div>|</li>", "\n", content or "", flags=re.I)
     text = re.sub(r"<[^>]+>", "", text)
     return re.sub(r"\n{3,}", "\n\n", unescape(text)).strip()
 
 
 def is_translatable(doc) -> bool:
-    if doc.is_deleted or doc.is_media or doc.is_document or doc.is_voice_clip or doc.is_screenshot:
+    # files, images, polls and system messages have no text of their own to translate
+    if doc.message_type != "Text" or doc.is_bot_message:
         return False
-    if doc.message_type or doc.message_template_type:  # info / template / system messages
+    return bool(plain_text(doc.text))
+
+
+def can_read_channel(channel: str, user: str) -> bool:
+    """Raven's own rule: members of private channels and DMs, workspace members for public ones."""
+    if not channel:
         return False
-    return bool(plain_text(doc.content))
+    return bool(frappe.has_permission("Raven Channel", ptype="read", doc=channel, user=user))
 
 
 # ---------------------------------------------------------------- cache invalidation
@@ -58,8 +62,12 @@ def is_translatable(doc) -> bool:
 
 def on_message_update(doc, method=None):
     """An edited message must be translated again the next time it is shown."""
-    if not doc.is_new() and doc.has_value_changed("content"):
+    if not doc.is_new() and doc.has_value_changed("text"):
         frappe.db.delete("Chat Message Translation", {"message": doc.name})
+
+
+def on_message_trash(doc, method=None):
+    frappe.db.delete("Chat Message Translation", {"message": doc.name})
 
 
 # ---------------------------------------------------------------- translation engines
@@ -388,30 +396,13 @@ def translate_for_user(names: list[str], user: str) -> dict[str, str]:
 
     docs = {}
     for row in frappe.get_all(
-        "ClefinCode Chat Message",
+        "Raven Message",
         filters={"name": ["in", names]},
-        fields=[
-            "name",
-            "chat_channel",
-            "sub_channel",
-            "content",
-            "is_deleted",
-            "is_media",
-            "is_document",
-            "is_voice_clip",
-            "is_screenshot",
-            "message_type",
-            "message_template_type",
-        ],
+        fields=["name", "channel_id", "text", "message_type", "is_bot_message"],
     ):
-        channel = row.sub_channel or row.chat_channel
         # never translate (and so reveal) a message from a channel the user cannot read
-        if (
-            user == "Administrator"
-            or can_access_channel(channel, user)
-            or (row.chat_channel and can_access_channel(row.chat_channel, user))
-        ):
-            docs[row.name] = (row, channel)
+        if user == "Administrator" or can_read_channel(row.channel_id, user):
+            docs[row.name] = (row, row.channel_id)
 
     result = {}
     cached = _cached(list(docs), lang)
@@ -427,7 +418,7 @@ def translate_for_user(names: list[str], user: str) -> dict[str, str]:
 
     for start in range(0, len(todo), MAX_BATCH):
         batch = todo[start : start + MAX_BATCH]
-        translated = call_llm([(n, plain_text(docs[n][0].content)) for n in batch], lang, settings)
+        translated = call_llm([(n, plain_text(docs[n][0].text)) for n in batch], lang, settings)
         if translated is None:
             break  # failure already logged; untranslated messages are retried on the next display
         for name in batch:
@@ -458,18 +449,11 @@ def get_translations(message_names: str | list):
 
 @frappe.whitelist(allow_guest=False)
 def get_client_settings():
-    """What the browser needs: whether to translate for this user, and the chat button's appearance."""
+    """What the browser needs: whether to translate for this user, and into which language."""
     settings = get_settings()
     lang = user_language(frappe.session.user)
     allowed = allowed_languages(settings)
-    size = min(max(int(settings.button_size or 56), 32), 96)
     return {
         "enabled": bool(settings.enabled) and bool(lang) and (allowed is None or lang in allowed),
         "language": lang,
-        "button": {
-            "icon": settings.button_icon or None,
-            "color": settings.button_color or None,
-            "position": "left" if settings.button_position == "Bottom Left" else "right",
-            "size": size,
-        },
     }

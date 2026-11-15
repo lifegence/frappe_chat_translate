@@ -12,12 +12,12 @@ except ImportError:  # Frappe v15
     from frappe.tests.utils import FrappeTestCase as IntegrationTestCase
 
 from frappe_chat_translate import translation as t
-from frappe_chat_translate.tests.test_guard import DESK_ROLE, call, ensure_user, make_group
 
 JA_USER = "tr.ja@example.com"
 VI_USER = "tr.vi@example.com"
 JA_USER_2 = "tr.ja2@example.com"
 OUTSIDER = "tr.out@example.com"
+WORKSPACE = "Chat Translate Test"
 
 
 def fake_engine(items, target, settings):
@@ -32,42 +32,71 @@ def fake_engine(items, target, settings):
     return out
 
 
+def ensure_user(email, first_name, lang):
+    if not frappe.db.exists("User", email):
+        frappe.get_doc(
+            doctype="User",
+            email=email,
+            first_name=first_name,
+            user_type="System User",
+            send_welcome_email=0,
+            roles=[{"role": "Raven User"}],
+        ).insert(ignore_permissions=True)
+    frappe.db.set_value("User", email, "language", lang)
+
+
 def get(user, *names):
     frappe.set_user(user)
-    return call(
-        "frappe_chat_translate.translation.get_translations", message_names=frappe.as_json(list(names))
-    )
+    try:
+        return t.get_translations(frappe.as_json(list(names)))
+    finally:
+        frappe.set_user("Administrator")
 
 
 class TestTranslation(IntegrationTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        for email, name, kind, lang in (
-            (JA_USER, "Tr Ja", "System User", "ja"),
-            (VI_USER, "Tr Vi", "Website User", "vi"),
-            (JA_USER_2, "Tr Ja2", "Website User", "ja"),
-            (OUTSIDER, "Tr Out", "Website User", "vi"),
+        for email, name, lang in (
+            (JA_USER, "Tr Ja", "ja"),
+            (VI_USER, "Tr Vi", "vi"),
+            (JA_USER_2, "Tr Ja2", "ja"),
+            (OUTSIDER, "Tr Out", "vi"),
         ):
-            ensure_user(email, name, kind, roles=(DESK_ROLE,) if kind == "System User" else ())
-            frappe.db.set_value("User", email, "language", lang)
+            ensure_user(email, name, lang)
         settings = frappe.get_doc("Chat Translate Settings")
         settings.enabled = 1
         settings.languages = ""
         settings.save(ignore_permissions=True)
-        cls.room, _ = make_group("translation room", [JA_USER, VI_USER, JA_USER_2])
+        if not frappe.db.exists("Raven Workspace", WORKSPACE):
+            frappe.get_doc(doctype="Raven Workspace", workspace_name=WORKSPACE, type="Private").insert(
+                ignore_permissions=True
+            )
+        channel = frappe.get_doc(
+            doctype="Raven Channel",
+            channel_name=f"translation room {frappe.generate_hash(length=6)}",
+            type="Private",
+            workspace=WORKSPACE,
+        ).insert(ignore_permissions=True)
+        channel.add_members([JA_USER, VI_USER, JA_USER_2])
+        cls.channel = channel.name
         frappe.db.commit()
 
     def tearDown(self):
         frappe.set_user("Administrator")
 
-    def send(self, content):
-        from clefincode_chat.api.api_1_3_4 import api as capi
-
-        frappe.set_user("Administrator")
-        return capi.send(content, "Administrator", self.room, "Administrator")["results"][0][
-            "new_message_name"
-        ]
+    def send(self, text, **values):
+        return (
+            frappe.get_doc(
+                doctype="Raven Message",
+                channel_id=self.channel,
+                message_type="Text",
+                text=text,
+                **values,
+            )
+            .insert(ignore_permissions=True)
+            .name
+        )
 
     def test_plain_text_strips_editor_html(self):
         self.assertEqual(
@@ -105,33 +134,38 @@ class TestTranslation(IntegrationTestCase):
     def test_non_member_gets_nothing(self, engine):
         name = self.send("<p>Internal only.</p>")
         self.assertEqual(get(OUTSIDER, name), {})
+        engine.assert_not_called()
 
     @patch("frappe_chat_translate.translation.call_llm", side_effect=fake_engine)
     def test_edit_clears_cache(self, engine):
         name = self.send("<p>Version one.</p>")
         get(VI_USER, name)
-        frappe.set_user("Administrator")
-        doc = frappe.get_doc("ClefinCode Chat Message", name)
-        doc.content = "<p>Version two.</p>"
+        doc = frappe.get_doc("Raven Message", name)
+        doc.text = "<p>Version two.</p>"
         doc.save(ignore_permissions=True)
         self.assertEqual(get(VI_USER, name)[name], "[vi] Version two.")
 
-    def test_media_and_info_messages_are_skipped(self):
-        doc = frappe._dict(
-            is_deleted=0,
-            is_media=1,
-            is_document=0,
-            is_voice_clip=0,
-            is_screenshot=0,
-            message_type="",
-            message_template_type="",
-            content="x",
-        )
+    @patch("frappe_chat_translate.translation.call_llm", side_effect=fake_engine)
+    def test_delete_removes_cached_translations(self, engine):
+        name = self.send("<p>Short lived.</p>")
+        get(VI_USER, name)
+        self.assertTrue(frappe.db.exists("Chat Message Translation", {"message": name}))
+        frappe.delete_doc("Raven Message", name, ignore_permissions=True, force=True)
+        self.assertFalse(frappe.db.exists("Chat Message Translation", {"message": name}))
+
+    def test_files_polls_and_bots_are_skipped(self):
+        doc = frappe._dict(message_type="File", is_bot_message=0, text="x")
         self.assertFalse(t.is_translatable(doc))
-        doc.update(is_media=0, message_type="info")
+        doc.update(message_type="Text", is_bot_message=1)
         self.assertFalse(t.is_translatable(doc))
-        doc.update(message_type="")
+        doc.update(is_bot_message=0)
         self.assertTrue(t.is_translatable(doc))
+        doc.update(text="<p> </p>")
+        self.assertFalse(t.is_translatable(doc))
+
+    def test_client_settings(self):
+        frappe.set_user(VI_USER)
+        self.assertEqual(t.get_client_settings(), {"enabled": True, "language": "vi"})
 
     def test_request_asks_for_source_language_per_message(self):
         req = t.build_request([("m1", "hi"), ("m2", "chào")], "ja", t.get_settings())
